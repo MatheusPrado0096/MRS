@@ -43,6 +43,9 @@ Se algum valor sair errado, corrija em `tools/kms-correcoes.json` (`"PÁTIO:pág
 - O alfinete é posicionado por interpolação linear entre dois marcos vizinhos (≤ 1,5 km de distância entre si); a planta é esquemática, então a posição é uma **referência visual**, não uma medição.
 - Pátios sem planta enviada (IEF, FGA, FCE) ainda não entram na busca por KM.
 
+## Antes de publicar uma atualização
+Rode `python3 tools/versionar.py`: ele carimba uma versão (`?v=...`) nos arquivos JS/CSS/dados. Sem isso, o celular pode guardar um `app.js` antigo em cache e o site novo "não responder" (o GitHub Pages deixa o navegador reaproveitar arquivos por ~10 minutos).
+
 ## Estrutura
 ```
 index.html            página única

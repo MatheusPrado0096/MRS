@@ -1,6 +1,6 @@
 /* Portal de Pátios • MRS — interface */
-import * as Viewer from './viewer.js';
-import * as Km from './km.js';
+import * as Viewer from './viewer.js?v=202610221243';
+import * as Km from './km.js?v=202610221243';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,9 +13,9 @@ const store = {
 
 /* ---------------- dados ---------------- */
 let META = {};
-try { const r = await fetch('data/meta.json', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
+try { const r = await fetch('data/meta.json?v=202610221243', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
 Viewer.setMeta(META);
-try { const r = await fetch('data/kms.json', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
+try { const r = await fetch('data/kms.json?v=202610221243', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
 const hasMeta = Object.keys(META).length > 0;
 const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
 
@@ -273,7 +273,7 @@ $$('.tab').forEach((t) => (t.onclick = () => {
   const id = t.dataset.tab; if (id === S.tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
   location.hash = '#' + id + (id === 'equipamentos' && S.yard ? '/' + S.yard : '');
 }));
-$('#kmForm').addEventListener('submit', (e) => {
+$('#kmForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
   const v = $('#kmQuick').value.trim(); if (!v) return $('#kmQuick').focus();
   S.q = v; S.type = ''; $('#search').value = v;
