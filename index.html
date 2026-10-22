@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Portal de Pátios • MRS Logística</title>
+<meta name="description" content="Plantas de pátios, abrigos, PNs e CXs da MRS Logística — consulta técnica rápida, inclusive pelo celular.">
+<meta name="theme-color" content="#00335e">
+<meta property="og:title" content="Portal de Pátios • MRS Logística">
+<meta property="og:description" content="Consulta técnica de plantas e equipamentos dos pátios.">
+<meta property="og:image" content="assets/img/icon-512.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  // aplica o tema antes de pintar a página (evita "flash" branco)
+  try{var t=localStorage.getItem('mrs-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}
+</script>
+</head>
+<body>
+
+<!-- ícones -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="m15 15 6 6m-6-6v4.8m0-4.8h4.8M9 19.8V15m0 0H4.2M9 15l-6 6M15 4.2V9m0 0h4.8M15 9l6-6M9 4.2V9m0 0H4.2M9 9 3 3"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2zM14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-fitw" viewBox="0 0 24 24"><path d="m18 8 4 4-4 4M2 12h20M6 8l-4 4 4 4"/></symbol>
+    <symbol id="i-fitp" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6zM9 3v15M15 6v15"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">Pular para o conteúdo</a>
+
+<header class="topbar">
+  <a class="brand" href="#patios" aria-label="MRS Logística — início">
+    <img class="mark" src="assets/img/mrs-mark.png" alt="MRS" width="62" height="31">
+    <span class="brand-text"><small>Logística • Consulta técnica</small><b>Portal de Pátios</b></span>
+  </a>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="goSearch" aria-label="Pesquisar" title="Pesquisar ( / )"><svg class="ic"><use href="#i-search"/></svg></button>
+    <button class="icon-btn" id="themeBtn" aria-label="Alternar tema claro/escuro" title="Alternar tema"><svg class="ic"><use id="themeIcon" href="#i-moon"/></svg></button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist" aria-label="Seções">
+  <span class="tab-ind" aria-hidden="true"></span>
+  <button class="tab" role="tab" data-tab="patios"><svg class="ic"><use href="#i-map"/></svg><span>Pátios</span></button>
+  <button class="tab" role="tab" data-tab="equipamentos"><svg class="ic"><use href="#i-layers"/></svg><span>Equipamentos</span></button>
+  <button class="tab" role="tab" data-tab="pesquisa"><svg class="ic"><use href="#i-search"/></svg><span>Pesquisa</span></button>
+</nav>
+
+<main id="main">
+  <!-- PÁTIOS -->
+  <section id="patios" class="panel" role="tabpanel">
+    <div class="hero">
+      <div class="hero-bg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="hero-copy">
+        <span class="eyebrow">Acesso rápido</span>
+        <h1>Plantas e equipamentos<br>dos pátios</h1>
+        <p>Abra a planta geral de cada pátio ou consulte abrigos, PNs e CXs com zoom por pinça, localização no mapa e modo noturno.</p>
+      </div>
+      <div class="hero-mark" aria-hidden="true"><img src="assets/img/mrs-mark.png" alt=""><span class="shine"></span></div>
+      <dl class="stats" id="stats"></dl>
+    </div>
+    <div class="section-head"><h2>Pátios</h2><span class="muted" id="yardCount"></span></div>
+    <div id="yardCards" class="grid yards"></div>
+  </section>
+
+  <!-- EQUIPAMENTOS -->
+  <section id="equipamentos" class="panel" role="tabpanel" hidden>
+    <div class="section-head"><div><span class="eyebrow">Equipamentos</span><h2 id="equipTitle">Abrigos, PN e CX</h2></div><span class="muted" id="equipCount"></span></div>
+    <div class="chips scroll" id="yardChips" role="group" aria-label="Filtrar por pátio"></div>
+    <div id="equipCards" class="grid"></div>
+  </section>
+
+  <!-- PESQUISA -->
+  <section id="pesquisa" class="panel" role="tabpanel" hidden>
+    <div class="section-head"><div><span class="eyebrow">Pesquisa</span><h2>Encontre qualquer item</h2></div></div>
+    <div class="searchbox">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Código, ABR, PN, CX ou pátio…" aria-label="Pesquisar">
+      <button class="icon-btn small" id="clearBtn" aria-label="Limpar pesquisa" hidden><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="chips" id="typeChips" role="group" aria-label="Filtrar por tipo"></div>
+    <p id="resultCount" class="muted" aria-live="polite"></p>
+    <div id="results" class="grid"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <img src="assets/img/mrs-logo.png" alt="" width="28" height="28">
+  <span>MRS Logística • Portal de Pátios</span>
+</footer>
+
+<!-- VISUALIZADOR -->
+<div id="viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Visualizador de documento" hidden>
+  <div class="v-top">
+    <button class="icon-btn" id="vClose" aria-label="Fechar (Esc)" title="Fechar (Esc)"><svg class="ic"><use href="#i-back"/></svg></button>
+    <div class="v-title"><b id="vTitle"></b><small id="vSub"></small></div>
+    <div class="v-actions">
+      <a class="icon-btn" id="vLoc" target="_blank" rel="noopener noreferrer" aria-label="Abrir localização no mapa" title="Localização" hidden><svg class="ic"><use href="#i-pin"/></svg></a>
+      <button class="icon-btn" id="vNight" aria-label="Modo noturno do documento" title="Modo noturno do documento ( N )"><svg class="ic"><use href="#i-moon"/></svg></button>
+      <button class="icon-btn" id="vShare" aria-label="Compartilhar link" title="Compartilhar link"><svg class="ic"><use href="#i-share"/></svg></button>
+      <a class="icon-btn" id="vDownload" aria-label="Baixar PDF" title="Baixar PDF" download><svg class="ic"><use href="#i-download"/></svg></a>
+      <button class="icon-btn desk-only" id="vFull" aria-label="Tela cheia ( F )" title="Tela cheia ( F )"><svg class="ic"><use href="#i-expand"/></svg></button>
+    </div>
+  </div>
+  <div class="v-progress" id="vProgress"><i></i></div>
+
+  <div class="v-stage" id="vStage" tabindex="0" aria-label="Documento. Use pinça ou roda do mouse para ampliar e arraste para mover.">
+    <canvas id="vCanvasA" class="v-canvas"></canvas>
+    <canvas id="vCanvasB" class="v-canvas"></canvas>
+    <div class="v-loading" id="vLoading"><div class="spinner"></div><span id="vLoadingText">Carregando documento…</span></div>
+    <div class="v-hint" id="vHint"><span class="hand"></span><b>Use dois dedos para ampliar</b><small>Arraste para mover • toque duas vezes para dar zoom</small></div>
+    <div class="v-zoom-badge" id="vZoomBadge">100%</div>
+  </div>
+
+  <div class="v-dock" id="vDock">
+    <div class="dock-group">
+      <button class="icon-btn" id="vPrev" aria-label="Página anterior" title="Página anterior ( ← )"><svg class="ic"><use href="#i-left"/></svg></button>
+      <button class="page-pill" id="vPageBtn" aria-label="Escolher página" title="Escolher página"><span id="vPageNow">1</span><i>/</i><span id="vPageTotal">1</span></button>
+      <button class="icon-btn" id="vNext" aria-label="Próxima página" title="Próxima página ( → )"><svg class="ic"><use href="#i-right"/></svg></button>
+    </div>
+    <span class="dock-sep"></span>
+    <div class="dock-group">
+      <button class="icon-btn" id="vZoomOut" aria-label="Diminuir zoom" title="Diminuir ( - )"><svg class="ic"><use href="#i-minus"/></svg></button>
+      <button class="zoom-pill" id="vZoomPct" aria-label="Voltar ao ajuste" title="Voltar a 100%">100%</button>
+      <button class="icon-btn" id="vZoomIn" aria-label="Aumentar zoom" title="Aumentar ( + )"><svg class="ic"><use href="#i-plus"/></svg></button>
+    </div>
+    <span class="dock-sep"></span>
+    <div class="dock-group">
+      <button class="icon-btn" id="vFit" aria-label="Ajustar à tela" title="Ajustar à largura / página ( 0 )"><svg class="ic"><use id="vFitIcon" href="#i-fitw"/></svg></button>
+      <button class="icon-btn" id="vRotate" aria-label="Girar página" title="Girar ( R )"><svg class="ic"><use href="#i-rotate"/></svg></button>
+    </div>
+  </div>
+
+  <div class="v-pages" id="vPages" hidden>
+    <div class="v-pages-card">
+      <div class="v-pages-head"><b>Páginas</b><button class="icon-btn small" id="vPagesClose" aria-label="Fechar lista de páginas"><svg class="ic"><use href="#i-x"/></svg></button></div>
+      <div class="v-pages-grid" id="vPagesGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script type="module" src="assets/js/app.js"></script>
+<noscript><p style="padding:24px;font-family:sans-serif">Ative o JavaScript para usar o Portal de Pátios.</p></noscript>
+</body>
+</html>
