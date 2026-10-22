@@ -5,7 +5,7 @@ Saída: thumbs/*.webp  e  data/meta.json
 Rode novamente sempre que adicionar/trocar PDFs."""
 import json, re, subprocess, os, tempfile, sys
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageChops
 root = Path(__file__).resolve().parent.parent
 txt = (root/'data.js').read_text(encoding='utf-8')
 data = json.loads(re.search(r'window\.PATIOS\s*=\s*(\[.*\])\s*;?\s*$', txt, re.S).group(1))
@@ -26,6 +26,8 @@ for rel in dict.fromkeys(paths):
         subprocess.run(['pdftoppm','-f','1','-l','1','-r','60','-png',str(f),td+'/p'],check=True)
         png = next(Path(td).glob('p*.png'))
         im = Image.open(png).convert('RGB'); im.thumbnail((640,640))
+        r, g, b = im.split()   # monocromático: menor canal = "tinta" (preto no tema claro; o CSS inverte no escuro)
+        im = ImageChops.darker(ImageChops.darker(r, g), b).convert('RGB')
         im.save(out,'WEBP',quality=72,method=6)
     meta[rel] = {'pages': pages, 'thumb': f'thumbs/{out.name}', 'w': float(size.group(1)), 'h': float(size.group(2)), 'kb': round(f.stat().st_size/1024)}
 (root/'data'/'meta.json').write_text(json.dumps(meta, ensure_ascii=False, separators=(',',':')), encoding='utf-8')

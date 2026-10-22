@@ -31,6 +31,19 @@ let renderGen = 0, renderTask = null, renderTimer = 0, tween = 0, momentum = 0, 
 let night = false, opened = false, onCloseCb = null, hintTimer = 0, badgeTimer = 0, thumbToken = 0;
 let curPage = null;
 
+/* ---------------- cores: desenho monocromático (preto no claro, branco no escuro) ---------------- */
+// Cada pixel vira o menor dos canais RGB (vermelho, ciano, amarelo… viram "tinta" preta). No escuro, inverte.
+function mono(ctx, w, h, invert) {
+  const img = ctx.getImageData(0, 0, w, h), px = new Uint32Array(img.data.buffer);
+  for (let i = 0; i < px.length; i++) {
+    const p = px[i], a = p >>> 24; if (!a) continue;
+    const r = p & 255, g = (p >>> 8) & 255, b = (p >>> 16) & 255;
+    let m = r < g ? r : g; if (b < m) m = b; if (invert) m = 255 - m;
+    px[i] = (a << 24) | (m << 16) | (m << 8) | m;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 /* ---------------- geometria ---------------- */
 const size = () => ({ W: el.stage.clientWidth, H: el.stage.clientHeight });
 function zFit(mode) {
@@ -108,11 +121,12 @@ async function renderNow() {
     console.warn('Falha ao renderizar', e); return;
   }
   if (gen !== renderGen) return;
-  // fundo branco (e sombra) da página, desenhados atrás do conteúdo
+  mono(ctx, c.width, c.height, night);
+  // fundo da página (branco no claro, preto no escuro) e sombra, desenhados atrás do conteúdo
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';   // tudo abaixo é pintado ATRÁS do conteúdo do PDF
   const rx = (target.x + m) * dpr, ry = (target.y + m) * dpr, rw = pw * target.z * dpr, rh = ph * target.z * dpr;
-  ctx.fillStyle = '#fff'; ctx.fillRect(rx, ry, rw, rh);
+  ctx.fillStyle = night ? '#000' : '#fff'; ctx.fillRect(rx, ry, rw, rh);
   if (!night) { // sombra: o retângulo fica fora do canvas e só a sombra aparece, atrás do papel
     ctx.shadowColor = 'rgba(0,20,40,.38)'; ctx.shadowBlur = 26 * dpr; ctx.shadowOffsetY = 8 * dpr; ctx.shadowOffsetX = -20000;
     ctx.fillStyle = '#000'; ctx.fillRect(rx + 20000, ry, rw, rh);
@@ -376,7 +390,7 @@ function buildPagesGrid() {
         const sc = (220 * Math.min(devicePixelRatio || 1, 2)) / v0.width, vp = pg.getViewport({ scale: sc });
         cv.width = vp.width; cv.height = vp.height;
         const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-        await pg.render({ canvasContext: ctx, canvas: cv, viewport: vp }).promise; cv.dataset.done = 1;
+        await pg.render({ canvasContext: ctx, canvas: cv, viewport: vp }).promise; mono(ctx, cv.width, cv.height, false); cv.dataset.done = 1;
       } catch { return; }
     }
   };
