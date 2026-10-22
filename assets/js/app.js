@@ -1,5 +1,6 @@
 /* Portal de Pátios • MRS — interface */
 import * as Viewer from './viewer.js';
+import * as Km from './km.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -14,6 +15,7 @@ const store = {
 let META = {};
 try { const r = await fetch('data/meta.json', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
 Viewer.setMeta(META);
+try { const r = await fetch('data/kms.json', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
 const hasMeta = Object.keys(META).length > 0;
 const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
 
@@ -122,6 +124,40 @@ function mount(container, html) {
   // remove o atraso depois da entrada para o hover ficar instantâneo
   setTimeout(() => $$('.card', container).forEach((c) => (c.style.transitionDelay = '')), 1400);
 }
+function kmCard(r, q, kind) {
+  const p = yards.find((x) => x.id === r.id); if (!p) return '';
+  const nome = p.nome === p.id ? p.id : `${p.id} • ${p.nome}`;
+  const range = `${Km.fmtKm(r.range.min)} → ${Km.fmtKm(r.range.max)}`;
+  let chips = '', act = '';
+  if (q.lo !== undefined) {
+    chips = `<span class="ok">Faixa lida na planta</span><span>${range}</span>`;
+    act = `<button class="btn primary" data-act="plant" data-p="${esc(p.id)}" ${p.plantaOk ? '' : 'disabled'}><svg class="ic"><use href="#i-map"/></svg>Abrir planta</button>`;
+  } else {
+    const h = r.hits?.[0];
+    chips = kind === 'exact'
+      ? `<span class="ok">✓ Neste pátio</span><span>página ${h.page}</span>${h.between[0] !== h.between[1] ? `<span>entre ${Km.fmtKm(Math.min(...h.between))} e ${Km.fmtKm(Math.max(...h.between))}</span>` : '<span>sobre um marco da planta</span>'}${r.hits.length > 1 ? `<span class="warn">${r.hits.length} pontos possíveis</span>` : ''}`
+      : `<span class="warn">≈ ${r.dist} m do marco ${Km.fmtKm(r.mark.km)}</span><span>página ${r.page}</span>`;
+    act = `<button class="btn primary" data-act="km-open" data-p="${esc(p.id)}" data-km="${q.m}" ${p.plantaOk ? '' : 'disabled'}><svg class="ic"><use href="#i-pin"/></svg>${kind === 'exact' ? 'Ver na planta' : 'Ver mais próximo'}</button>`;
+  }
+  return `<article class="card km">
+    ${thumbHtml(p.thumb, p.plantaOk, 'Planta ainda não enviada', q.lo !== undefined ? 'plant' : 'km-open', `data-p="${esc(p.id)}" data-km="${q.m || ''}"`)}<span class="badge">${esc(p.id)}</span>${p.pages ? `<span class="pages">${p.pages} pág.</span>` : ''}</button>
+    <div class="card-body">
+      <span class="tag">${q.label}</span>
+      <h3>${esc(nome)}</h3>
+      <div class="kminfo">${chips}</div>
+      <p style="margin-top:6px">Marcos lidos: ${range}</p>
+      <div class="actions">${act}<button class="btn" data-act="list" data-p="${esc(p.id)}">${esc(p.label)}</button></div>
+    </div></article>`;
+}
+function kmBlock(q) {
+  const r = Km.searchKm(q);
+  const list = r.exact.length ? r.exact.map((x) => kmCard(x, q, 'exact')) : r.near.map((x) => kmCard(x, q, 'near'));
+  let head;
+  if (r.exact.length) head = `<b>${q.label}</b><small>${q.lo !== undefined ? `${r.exact.length} pátio(s) com marcos nesta faixa` : r.exact.length === 1 ? 'Encontrado em 1 pátio — toque em "Ver na planta" para ver o alfinete' : `Encontrado em ${r.exact.length} pátios`}</small>`;
+  else if (r.near.length) head = `<b>${q.label}</b><small>Nenhum pátio cobre exatamente este KM. Mostrando o mais próximo.</small>`;
+  else head = `<b>${q.label}</b><small>Nenhum pátio com marcos perto deste KM nas plantas cadastradas.</small>`;
+  return { html: `<div class="kmbox"><svg class="ic"><use href="#i-pin"/></svg><div>${head}</div></div>` + list.join(''), count: list.length };
+}
 const emptyBox = (t, s) => `<div class="empty"><b>${esc(t)}</b>${esc(s)}</div>`;
 
 /* ---------------- estatísticas ---------------- */
@@ -161,14 +197,19 @@ function renderSearch() {
   $('#typeChips').innerHTML = types.map((t) => `<button class="chip" aria-pressed="${S.type === t}" data-act="chip-type" data-t="${t}">${t || 'Todos'}</button>`).join('');
   $('#clearBtn').hidden = !S.q;
   const hit = (txt) => terms.every((t) => txt.includes(t));
+  const kq = Km.hasKmData() ? Km.parseKm(S.q) : null;
+  const kb = kq ? kmBlock(kq) : null;
   const ri = items.filter((i) => (!S.type || i.type === S.type) && hit(norm(`${i.tipo} ${i.type} ${i.nome} ${i.codigo} ${i.pid} ${i.pnome} ${i.plabel}`)));
   const ry = S.type ? [] : (terms.length ? yards.filter((p) => hit(norm(`${p.id} ${p.nome} ${p.label}`))) : []);
-  $('#resultCount').textContent = (ri.length + ry.length) + (ri.length + ry.length === 1 ? ' resultado' : ' resultados');
-  let html = '';
+  const total = ri.length + ry.length + (kb ? kb.count : 0);
+  $('#resultCount').textContent = total + (total === 1 ? ' resultado' : ' resultados');
+  let html = kb && (kb.count || q6(S.q)) ? kb.html : '';
   if (ry.length) html += `<h3 class="sub-head">Pátios</h3>` + ry.map((p) => yardCard(p, terms)).join('');
   if (ri.length) html += (ry.length ? `<h3 class="sub-head">Equipamentos</h3>` : '') + ri.map((i) => itemCard(i, terms)).join('');
-  mount($('#results'), html || emptyBox('Nenhum resultado', 'Tente outro código, nome de pátio ou tipo.'));
+  mount($('#results'), html || emptyBox('Nenhum resultado', 'Tente outro código, nome de pátio, tipo ou KM (ex.: 364+520).'));
 }
+
+const q6 = (t) => /\+|\d{6}|[.,]/.test(t);   // forma inequívoca de KM: mostra o aviso mesmo sem resultado
 
 /* ---------------- abas ---------------- */
 const tabsEl = $('#tabs'), ind = $('.tab-ind');
@@ -193,7 +234,7 @@ document.fonts?.ready.then(moveInd);
 function parseHash() {
   const raw = decodeURIComponent(location.hash.slice(1)), [path, qs = ''] = raw.split('?');
   const [tab, arg = ''] = path.split('/'), params = new URLSearchParams(qs);
-  return { tab: ['patios', 'equipamentos', 'pesquisa'].includes(tab) ? tab : 'patios', arg, ver: params.get('ver'), p: +params.get('p') || 1 };
+  return { tab: ['patios', 'equipamentos', 'pesquisa'].includes(tab) ? tab : 'patios', arg, ver: params.get('ver'), p: +params.get('p') || 1, km: +params.get('km') || 0 };
 }
 const baseHash = (tab = S.tab) => '#' + tab + (tab === 'equipamentos' && S.yard ? '/' + S.yard : '');
 let viewerPushed = false;
@@ -204,7 +245,9 @@ function route(first) {
   else if (h.tab === 'equipamentos') renderEquip();
   if (h.ver && byPath.has(h.ver) && avail(h.ver)) {
     const m = byPath.get(h.ver);
-    Viewer.open({ path: h.ver, title: m.title, sub: m.sub, link: m.link, page: h.p });
+    const yd = yards.find((y) => y.planta === h.ver);
+    const pins = h.km && yd ? Km.pinsFor(yd.id, h.km) : [];
+    Viewer.open({ path: h.ver, title: m.title, sub: m.sub, link: m.link, page: h.p, pins });
   } else if (Viewer.isOpen()) Viewer.close(true);
 }
 addEventListener('hashchange', () => route(false));
@@ -212,17 +255,17 @@ Viewer.onClose(() => {
   if (viewerPushed) { viewerPushed = false; history.back(); }
   else { history.replaceState(null, '', baseHash()); route(false); }
 });
-Viewer.onState(({ path, page }) => {
+Viewer.onState(({ path, page, km }) => {
   if (!parseHash().ver) return;
-  history.replaceState(null, '', `${baseHash()}?ver=${encodeURIComponent(path)}${page > 1 ? '&p=' + page : ''}`);
+  history.replaceState(null, '', `${baseHash()}?ver=${encodeURIComponent(path)}${page > 1 ? '&p=' + page : ''}${km ? '&km=' + km : ''}`);
 });
-function openDoc(path, code) {
+function openDoc(path, code, km) {
   if (!path || !avail(path)) return toast('Este PDF ainda não foi enviado.');
   viewerPushed = true;
   const it = code && itemByCode.get(code);
   const m = byPath.get(path) || {};
   if (it) { m.link = it.link; byPath.set(path, { ...m, title: `${it.nome} • ${it.badge}`, sub: `${it.pid} • ${it.pnome}`, link: it.link }); }
-  location.hash = `${baseHash()}?ver=${encodeURIComponent(path)}`;
+  location.hash = `${baseHash()}?ver=${encodeURIComponent(path)}${km ? '&km=' + km : ''}`;
 }
 
 /* ---------------- eventos ---------------- */
@@ -230,6 +273,13 @@ $$('.tab').forEach((t) => (t.onclick = () => {
   const id = t.dataset.tab; if (id === S.tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
   location.hash = '#' + id + (id === 'equipamentos' && S.yard ? '/' + S.yard : '');
 }));
+$('#kmForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const v = $('#kmQuick').value.trim(); if (!v) return $('#kmQuick').focus();
+  S.q = v; S.type = ''; $('#search').value = v;
+  if (S.tab === 'pesquisa') renderSearch(); else location.hash = '#pesquisa';
+  window.scrollTo({ top: 0 });
+});
 $('#goSearch').onclick = () => { location.hash = '#pesquisa'; setTimeout(() => $('#search').focus(), 60); };
 $('.brand').addEventListener('click', (e) => { if (S.tab === 'patios') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
 
@@ -237,6 +287,7 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const act = b.dataset.act;
   if (act === 'plant') { const p = yards.find((x) => x.id === b.dataset.p); p && openDoc(p.planta); }
+  else if (act === 'km-open') { const p = yards.find((x) => x.id === b.dataset.p); p && openDoc(p.planta, null, +b.dataset.km || 0); }
   else if (act === 'pdf') { const i = itemByCode.get(b.dataset.code); i && openDoc(i.pdf, i.codigo); }
   else if (act === 'list') { location.hash = '#equipamentos/' + b.dataset.p; window.scrollTo({ top: 0 }); }
   else if (act === 'chip-yard') { S.yard = b.dataset.p; S.fav = false; history.replaceState(null, '', baseHash('equipamentos')); renderEquip(); }

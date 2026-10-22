@@ -12,6 +12,9 @@ Funciona direto no **GitHub Pages**.
   - Renderiza só a área visível, então fica **nítido em qualquer ampliação** sem travar o celular.
   - Grade de páginas (miniaturas), girar página, modo noturno do documento, compartilhar link, baixar PDF, abrir localização.
   - Botão "Voltar" do celular fecha o visualizador; cada documento tem link direto (`#equipamentos/FSJ?ver=docs/...pdf`).
+- **Busca por KM** (formato `364+520`, também `364520`, `364,520` ou só `364`): informe o KM da ocorrência e o portal mostra **em qual pátio** ele está e abre a planta com um **alfinete** e uma linha vertical no ponto exato (interpolado entre os marcos de KM desenhados na planta). Se nenhum pátio cobrir o KM, mostra o mais próximo.
+  O campo fica na página inicial e na aba Pesquisa; o link do resultado (`...?ver=docs/plantas/FCA.pdf&km=364620`) pode ser compartilhado.
+- **Download com as cores corrigidas:** o botão de download oferece PDF **claro** (linhas pretas no branco), **escuro** (linhas brancas no preto) ou **original**. O arquivo é gerado no próprio navegador (continua vetorial, mesma qualidade).
 - pdf.js agora vai **dentro do repositório** (`assets/vendor/pdfjs`), sem depender de CDN.
 
 ## Publicar no GitHub Pages
@@ -30,19 +33,32 @@ Funciona direto no **GitHub Pages**.
   ```
   Isso atualiza `thumbs/` e `data/meta.json`. Itens cujo PDF não existe aparecem como **"PDF em breve"** (sem quebrar nada).
 
+## Busca por KM — como funciona e como atualizar
+As plantas são desenhos vetoriais sem texto pesquisável, então os marcos de KM (`000+000`, texto ciano na vertical) são lidos por OCR:
+```bash
+python3 tools/extrair-kms.py          # ou: python3 tools/extrair-kms.py FPI   (só um pátio)
+```
+(requer `poppler-utils`, `tesseract-ocr`, `opencv-python`, `numpy`, `Pillow`). Gera `data/kms.json` e, em `data/kms-debug/`, uma folha de conferência por página (recorte de cada marco + valor lido).
+Se algum valor sair errado, corrija em `tools/kms-correcoes.json` (`"PÁTIO:página:x": km_em_metros`, a chave aparece na folha de conferência) e rode de novo.
+- O alfinete é posicionado por interpolação linear entre dois marcos vizinhos (≤ 1,5 km de distância entre si); a planta é esquemática, então a posição é uma **referência visual**, não uma medição.
+- Pátios sem planta enviada (IEF, FGA, FCE) ainda não entram na busca por KM.
+
 ## Estrutura
 ```
 index.html            página única
 data.js               cadastro dos pátios/itens
 data/meta.json        (gerado) páginas, tamanho e miniatura de cada PDF
+data/kms.json         (gerado) marcos de KM lidos de cada planta
 thumbs/               (gerado) miniaturas
 docs/                 PDFs
 assets/css/style.css  estilos
 assets/js/app.js      interface, busca, rotas
-assets/js/viewer.js   visualizador de PDF
+assets/js/viewer.js   visualizador de PDF (zoom, pinça, alfinete de KM)
+assets/js/km.js       busca por KM
+assets/js/pdfexport.js geração do PDF claro/escuro para download
 assets/vendor/pdfjs   pdf.js (Apache-2.0)
 assets/img/           logo e ícones
-tools/                scripts auxiliares.
+tools/                scripts auxiliares
 ```
 
 ## Observações sobre os dados recebidos

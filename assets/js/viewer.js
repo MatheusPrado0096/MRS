@@ -2,6 +2,7 @@
  * Renderiza apenas a região visível (mais margem), então fica nítido em qualquer ampliação
  * sem estourar a memória do celular. Durante o gesto usa transformação CSS (60 fps). */
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
+import { fmtKm } from './km.js';
 
 const BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
 pdfjs.GlobalWorkerOptions.workerSrc = BASE + 'pdf.worker.min.mjs';
@@ -12,7 +13,8 @@ const el = {
   title: $('vTitle'), sub: $('vSub'), loading: $('vLoading'), loadingText: $('vLoadingText'),
   progress: $('vProgress'), hint: $('vHint'), badge: $('vZoomBadge'), dock: $('vDock'),
   prev: $('vPrev'), next: $('vNext'), pageNow: $('vPageNow'), pageTotal: $('vPageTotal'), pageBtn: $('vPageBtn'),
-  zoomPct: $('vZoomPct'), fitIcon: $('vFitIcon'), loc: $('vLoc'), dl: $('vDownload'),
+  zoomPct: $('vZoomPct'), fitIcon: $('vFitIcon'), loc: $('vLoc'), dl: $('vDownload'), dlMenu: $('vDlMenu'),
+  pinsLayer: $('vPins'), kmChip: $('vKmChip'), kmText: $('vKmText'),
   pages: $('vPages'), pagesGrid: $('vPagesGrid'),
 };
 
@@ -30,6 +32,7 @@ let fitMode = 'contain', autoFit = true, freeze = false;
 let renderGen = 0, renderTask = null, renderTimer = 0, tween = 0, momentum = 0, resizeObs = null;
 let night = false, opened = false, onCloseCb = null, hintTimer = 0, badgeTimer = 0, thumbToken = 0;
 let curPage = null;
+let pins = [];                      // alfinetes de KM: { page, x, y (fração da página), km, approx }
 
 /* ---------------- cores: desenho monocromático (preto no claro, branco no escuro) ---------------- */
 // Cada pixel vira o menor dos canais RGB (vermelho, ciano, amarelo… viram "tinta" preta). No escuro, inverte.
@@ -76,7 +79,7 @@ function updateFitIcon() {
 
 /* ---------------- transformação / renderização ---------------- */
 function apply() {
-  updateUi();
+  updateUi(); updatePins();
   if (!R || freeze) return;
   const s = V.z / R.z;
   front.style.transform = `translate3d(${V.x + (-R.m - R.x) * s}px,${V.y + (-R.m - R.y) * s}px,0) scale(${s})`;
@@ -140,6 +143,53 @@ async function renderNow() {
   el.loading.classList.add('off');
   if (!gesture.active && !tween && !momentum && (Math.abs(V.z - R.z) > 1e-6 || Math.abs(V.x - R.x) > 0.5 || Math.abs(V.y - R.y) > 0.5)) scheduleRender(40);
 }
+
+/* ---------------- alfinetes de KM ---------------- */
+const PIN_SVG = '<svg viewBox="0 0 24 34" width="34" height="48" aria-hidden="true"><path d="M12 33S2 20.5 2 12a10 10 0 0 1 20 0c0 8.500-10 21-10 21z" fill="#ff3b1d" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4.200" fill="#fff"/></svg>';
+function toRot(fx, fy) {            // fração na página original -> fração na página girada pelo usuário
+  switch (rot) { case 90: return [1 - fy, fx]; case 180: return [1 - fx, 1 - fy]; case 270: return [fy, 1 - fx]; default: return [fx, fy]; }
+}
+function renderPins() {
+  el.pinsLayer.replaceChildren();
+  const mine = pins.filter((p) => p.page === pageNum);
+  mine.forEach((p) => {
+    const w = document.createElement('div'); w.className = 'pin-wrap';
+    w.innerHTML = `<i class="pin-line"></i><div class="pin"><i class="pulse"></i>${PIN_SVG}<span class="pin-lbl">km ${fmtKm(p.km)}${p.approx ? ' (aprox.)' : ''}</span></div>`;
+    el.pinsLayer.appendChild(w); p._el = w;
+  });
+  el.kmChip.hidden = !pins.length;
+  if (pins.length) el.kmText.textContent = 'km ' + fmtKm(pins[0].km) + (pins[0].approx ? ' • mais próximo' : '') + (pins.length > 1 ? ` • ${pins.length} pontos` : '');
+  updatePins();
+}
+function updatePins() {
+  if (!pins.length) return;
+  for (const p of pins) {
+    if (!p._el || p.page !== pageNum) continue;
+    const [fx, fy] = toRot(p.x, p.y), px = V.x + fx * pw * V.z, py = V.y + fy * ph * V.z;
+    p._el.style.transform = `translate3d(${px}px,${V.y}px,0)`;
+    p._el.firstChild.style.height = ph * V.z + 'px';
+    p._el.lastChild.style.transform = `translate3d(0,${py - V.y}px,0)`;
+  }
+}
+function focusPin(p, animate = true) {
+  const [fx, fy] = toRot(p.x, p.y), { W, H } = size();
+  const z = Math.min(zMax(), Math.max(zFit('contain') * 2.4, zFit('width') * 1.3));
+  // os rótulos de KM ficam na base do desenho: centraliza um pouco acima, onde estão os trilhos, mantendo o alfinete à vista
+  const cy = Math.max(0.15, fy - 0.26);
+  const t = clampView({ z, x: W / 2 - fx * pw * z, y: (H - DOCK_RESERVE()) / 2 - cy * ph * z });
+  autoFit = false;
+  animate ? animateTo(t, 700) : (V = t, apply(), scheduleRender(0));
+}
+export function setPins(list, { focus = true } = {}) {
+  pins = (list || []).map((p) => ({ ...p }));
+  if (!pins.length) { renderPins(); emitState(); return; }
+  const first = pins[0];
+  const go = first.page === pageNum ? Promise.resolve() : gotoPage(first.page);
+  go.then(() => { renderPins(); if (focus) focusPin(first); emitState(); });
+}
+el.kmClear = $('vKmClear');
+el.kmClear.onclick = () => { pins = []; renderPins(); emitState(); fitView('contain', true); };
+el.kmChip.addEventListener('click', (e) => { if (e.target.closest('#vKmClear')) return; if (pins[0] && pins[0].page === pageNum) focusPin(pins[0]); });
 
 /* ---------------- animação ---------------- */
 function animateTo(t, ms = 260, after) {
@@ -279,6 +329,7 @@ async function loadPage(n) {
   el.prev.disabled = n <= 1; el.next.disabled = n >= pdf.numPages;
   el.pageBtn.disabled = pdf.numPages <= 1;
   [...el.pagesGrid.children].forEach((c, i) => c.classList.toggle('cur', i + 1 === n));
+  renderPins();
 }
 async function gotoPage(n, { keepFit = true } = {}) {
   if (!pdf || n < 1 || n > pdf.numPages) return;
@@ -299,7 +350,7 @@ export const isOpen = () => opened;
 export const onClose = (fn) => { onCloseCb = fn; };
 let stateCb = null;
 export const onState = (fn) => { stateCb = fn; };
-function emitState() { stateCb?.({ path: curPath, page: pageNum }); }
+function emitState() { stateCb?.({ path: curPath, page: pageNum, km: pins[0]?.km || 0 }); }
 
 function setProgress(f) {
   el.progress.classList.remove('done');
@@ -311,14 +362,14 @@ function showError(msg) {
   el.progress.classList.add('done');
 }
 
-export async function open({ path, title, sub = '', link = '', page = 1 }) {
-  if (opened && path === curPath) { if (page !== pageNum) gotoPage(page); return; }
-  opened = true; curPath = path;
+export async function open({ path, title, sub = '', link = '', page = 1, pins: initPins = [] }) {
+  if (opened && path === curPath) { if (initPins.length) setPins(initPins); else if (page !== pageNum) gotoPage(page); return; }
+  opened = true; curPath = path; pins = (initPins || []).map((p) => ({ ...p })); el.pinsLayer.replaceChildren(); el.kmChip.hidden = true;
+  closeDlMenu();
   document.body.classList.add('lock');
   el.root.classList.remove('closing'); el.root.hidden = false;
   el.title.textContent = title; el.sub.textContent = sub;
   el.loc.hidden = !link; if (link) el.loc.href = link;
-  el.dl.href = encodeURI(path); el.dl.setAttribute('download', path.split('/').pop());
   loadNight();
   el.loading.classList.remove('off', 'err'); el.loadingText.textContent = 'Carregando documento…';
   el.root.classList.remove('v-ready');
@@ -345,10 +396,10 @@ export async function open({ path, title, sub = '', link = '', page = 1 }) {
   }
   setProgress(1); setTimeout(() => el.progress.classList.add('done'), 250);
   buildPagesGrid();
-  pageNum = clampN(page, 1, pdf.numPages);
+  pageNum = clampN(pins[0]?.page || page, 1, pdf.numPages);
   await loadPage(pageNum);
   fitView('contain'); emitState();
-  maybeHint();
+  if (pins.length) setTimeout(() => focusPin(pins[0]), 350); else maybeHint();
 }
 
 export function close(silent = false) {
@@ -440,6 +491,31 @@ async function share() {
 }
 let toastFn = null; export const setToast = (fn) => { toastFn = fn; }; const toast = (m) => toastFn?.(m);
 
+/* ---------------- download (original / claro / escuro) ---------------- */
+function closeDlMenu() { el.dlMenu.hidden = true; el.dl.setAttribute('aria-expanded', 'false'); }
+el.dl.onclick = (e) => {
+  e.stopPropagation();
+  const show = el.dlMenu.hidden; el.dlMenu.hidden = !show; el.dl.setAttribute('aria-expanded', String(show));
+  el.dlMenu.querySelectorAll('button').forEach((b) => b.classList.toggle('rec', b.dataset.mode === (night ? 'dark' : 'light')));
+};
+document.addEventListener('click', (e) => { if (!el.dlMenu.hidden && !e.target.closest('#vDlMenu')) closeDlMenu(); });
+el.dlMenu.addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-mode]'); if (!b) return;
+  closeDlMenu();
+  const mode = b.dataset.mode, name = curPath.split('/').pop(), base = name.replace(/\.pdf$/i, '');
+  if (mode === 'original') {
+    const a = document.createElement('a'); a.href = encodeURI(curPath); a.download = name; document.body.appendChild(a); a.click(); a.remove(); return;
+  }
+  const label = mode === 'dark' ? 'escuro' : 'claro';
+  toast(`Preparando PDF ${label}…`); el.dl.classList.add('busy');
+  try {
+    const { downloadPdf } = await import('./pdfexport.js');
+    await downloadPdf(encodeURI(curPath), mode, `${base}-${label}.pdf`, (f) => { if (f > 0 && f < 1) setProgress(f); });
+    el.progress.classList.add('done'); toast(`PDF ${label} baixado`);
+  } catch (err) { console.warn(err); toast('Não foi possível gerar o PDF. Baixando o original.'); const a = document.createElement('a'); a.href = encodeURI(curPath); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+  finally { el.dl.classList.remove('busy'); }
+});
+
 /* ---------------- botões e teclado ---------------- */
 $('vClose').onclick = () => close();
 $('vPrev').onclick = () => gotoPage(pageNum - 1);
@@ -460,7 +536,7 @@ document.addEventListener('keydown', (e) => {
   if (!opened || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key, pan = (dx, dy) => { V = clampView({ ...V, x: V.x + dx, y: V.y + dy }); autoFit = false; apply(); scheduleRender(120); };
   const fitsX = pw * V.z <= size().W - EDGE * 2;
-  if (k === 'Escape') { if (!el.pages.hidden) closePages(); else close(); }
+  if (k === 'Escape') { if (!el.dlMenu.hidden) closeDlMenu(); else if (!el.pages.hidden) closePages(); else close(); }
   else if (k === '+' || k === '=') zoomBy(1.4);
   else if (k === '-' || k === '_') zoomBy(1 / 1.4);
   else if (k === '0') fitView(fitMode === 'contain' && autoFit ? 'width' : 'contain', true);

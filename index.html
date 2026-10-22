@@ -79,6 +79,14 @@
         <p>Abra a planta geral de cada pátio ou consulte abrigos, PNs e CXs com zoom por pinça, localização no mapa e modo noturno.</p>
       </div>
       <div class="hero-mark" aria-hidden="true"><img src="assets/img/mrs-mark.png" alt=""><span class="shine"></span></div>
+      <form class="kmform" id="kmForm" autocomplete="off">
+        <label for="kmQuick">Ocorrência? Busque o pátio pelo KM</label>
+        <div class="kmrow">
+          <svg class="ic"><use href="#i-pin"/></svg>
+          <input id="kmQuick" inputmode="text" enterkeyhint="search" placeholder="Ex.: 364+520" aria-label="Buscar por KM">
+          <button class="btn primary" type="submit">Localizar</button>
+        </div>
+      </form>
       <dl class="stats" id="stats"></dl>
     </div>
     <div class="section-head"><h2>Pátios</h2><span class="muted" id="yardCount"></span></div>
@@ -120,7 +128,7 @@
       <a class="icon-btn" id="vLoc" target="_blank" rel="noopener noreferrer" aria-label="Abrir localização no mapa" title="Localização" hidden><svg class="ic"><use href="#i-pin"/></svg></a>
       <button class="icon-btn" id="vNight" aria-label="Modo noturno do documento" title="Modo noturno do documento ( N )"><svg class="ic"><use href="#i-moon"/></svg></button>
       <button class="icon-btn" id="vShare" aria-label="Compartilhar link" title="Compartilhar link"><svg class="ic"><use href="#i-share"/></svg></button>
-      <a class="icon-btn" id="vDownload" aria-label="Baixar PDF" title="Baixar PDF" download><svg class="ic"><use href="#i-download"/></svg></a>
+      <button class="icon-btn" id="vDownload" aria-label="Baixar PDF" title="Baixar PDF" aria-haspopup="menu" aria-expanded="false"><svg class="ic"><use href="#i-download"/></svg></button>
       <button class="icon-btn desk-only" id="vFull" aria-label="Tela cheia ( F )" title="Tela cheia ( F )"><svg class="ic"><use href="#i-expand"/></svg></button>
     </div>
   </div>
@@ -129,6 +137,8 @@
   <div class="v-stage" id="vStage" tabindex="0" aria-label="Documento. Use pinça ou roda do mouse para ampliar e arraste para mover.">
     <canvas id="vCanvasA" class="v-canvas"></canvas>
     <canvas id="vCanvasB" class="v-canvas"></canvas>
+    <div class="v-pins" id="vPins" aria-hidden="true"></div>
+    <div class="v-kmchip" id="vKmChip" hidden><svg class="ic"><use href="#i-pin"/></svg><span id="vKmText"></span><button class="icon-btn small" id="vKmClear" aria-label="Remover alfinete"><svg class="ic"><use href="#i-x"/></svg></button></div>
     <div class="v-loading" id="vLoading"><div class="spinner"></div><span id="vLoadingText">Carregando documento…</span></div>
     <div class="v-hint" id="vHint"><span class="hand"></span><b>Use dois dedos para ampliar</b><small>Arraste para mover • toque duas vezes para dar zoom</small></div>
     <div class="v-zoom-badge" id="vZoomBadge">100%</div>
@@ -151,6 +161,13 @@
       <button class="icon-btn" id="vFit" aria-label="Ajustar à tela" title="Ajustar à largura / página ( 0 )"><svg class="ic"><use id="vFitIcon" href="#i-fitw"/></svg></button>
       <button class="icon-btn" id="vRotate" aria-label="Girar página" title="Girar ( R )"><svg class="ic"><use href="#i-rotate"/></svg></button>
     </div>
+  </div>
+
+  <div class="v-dlmenu" id="vDlMenu" role="menu" hidden>
+    <b>Baixar PDF</b>
+    <button role="menuitem" data-mode="light"><i class="sw sw-l"></i><span>Claro<small>linhas pretas no fundo branco</small></span></button>
+    <button role="menuitem" data-mode="dark"><i class="sw sw-d"></i><span>Escuro<small>linhas brancas no fundo preto</small></span></button>
+    <button role="menuitem" data-mode="original"><i class="sw sw-o"></i><span>Original<small>com as cores do arquivo</small></span></button>
   </div>
 
   <div class="v-pages" id="vPages" hidden>
