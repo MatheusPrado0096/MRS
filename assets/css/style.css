@@ -357,3 +357,9 @@ mark{background:color-mix(in srgb,var(--yellow) 70%,transparent);color:inherit;b
 #vDownload.busy{animation:pulse 1s ease-in-out infinite;pointer-events:none}
 @keyframes pulse{50%{opacity:.35}}
 @media (max-width:720px){.v-zoom-badge{top:56px}.kmbox{align-items:flex-start}}
+
+.pin-band{display:none;position:absolute;top:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,59,29,.20),rgba(255,59,29,.08));border-left:2px solid rgba(255,59,29,.55);border-right:2px solid rgba(255,59,29,.55)}
+.pin.mark svg{filter:drop-shadow(0 4px 6px rgba(0,0,0,.45)) hue-rotate(200deg) saturate(1.2)}
+.pin.mark .pulse{border-color:#ff9f1d}
+.pin.mark .pin-lbl{background:#e68a00}
+.pin-wrap:has(.mark) .pin-line{background:repeating-linear-gradient(180deg,#e68a00 0 14px,transparent 14px 24px)}

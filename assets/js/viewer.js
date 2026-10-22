@@ -2,7 +2,7 @@
  * Renderiza apenas a região visível (mais margem), então fica nítido em qualquer ampliação
  * sem estourar a memória do celular. Durante o gesto usa transformação CSS (60 fps). */
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
-import { fmtKm } from './km.js?v=202610221243';
+import { fmtKm } from './km.js?v=202610221254';
 
 const BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
 pdfjs.GlobalWorkerOptions.workerSrc = BASE + 'pdf.worker.min.mjs';
@@ -154,11 +154,11 @@ function renderPins() {
   const mine = pins.filter((p) => p.page === pageNum);
   mine.forEach((p) => {
     const w = document.createElement('div'); w.className = 'pin-wrap';
-    w.innerHTML = `<i class="pin-line"></i><div class="pin"><i class="pulse"></i>${PIN_SVG}<span class="pin-lbl">km ${fmtKm(p.km)}${p.approx ? ' (aprox.)' : ''}</span></div>`;
+    w.innerHTML = `<i class="pin-band"></i><i class="pin-line"></i><div class="pin${p.mark ? ' mark' : ''}"><i class="pulse"></i>${PIN_SVG}<span class="pin-lbl">km ${fmtKm(p.km)}</span></div>`;
     el.pinsLayer.appendChild(w); p._el = w;
   });
   el.kmChip.hidden = !pins.length;
-  if (pins.length) el.kmText.textContent = 'km ' + fmtKm(pins[0].km) + (pins[0].approx ? ' • mais próximo' : '') + (pins.length > 1 ? ` • ${pins.length} pontos` : '');
+  if (pins.length) el.kmText.textContent = pins[0].chip || ('km ' + fmtKm(pins[0].q || pins[0].km));
   updatePins();
 }
 function updatePins() {
@@ -167,13 +167,24 @@ function updatePins() {
     if (!p._el || p.page !== pageNum) continue;
     const [fx, fy] = toRot(p.x, p.y), px = V.x + fx * pw * V.z, py = V.y + fy * ph * V.z;
     p._el.style.transform = `translate3d(${px}px,${V.y}px,0)`;
-    p._el.firstChild.style.height = ph * V.z + 'px';
-    p._el.lastChild.style.transform = `translate3d(0,${py - V.y}px,0)`;
+    const [band, line, pin] = p._el.children;
+    line.style.height = ph * V.z + 'px';
+    pin.style.transform = `translate3d(0,${py - V.y}px,0)`;
+    if (p.span) {   // faixa do trecho entre os dois marcos
+      const xs = p.span.map((sx) => toRot(sx, p.y)[0] * pw * V.z + V.x).sort((m, n) => m - n);
+      band.style.cssText = `display:block;left:${xs[0] - px}px;width:${xs[1] - xs[0]}px;height:${ph * V.z}px`;
+    } else band.style.display = 'none';
   }
 }
 function focusPin(p, animate = true) {
-  const [fx, fy] = toRot(p.x, p.y), { W, H } = size();
-  const z = Math.min(zMax(), Math.max(zFit('contain') * 2.4, zFit('width') * 1.3));
+  const [fx0, fy] = toRot(p.x, p.y), { W, H } = size();
+  const same = pins.filter((q) => q.page === p.page);
+  let fx = fx0, z = Math.min(zMax(), Math.max(zFit('contain') * 2.4, zFit('width') * 1.3));
+  if (same.length > 1) {          // dois marcos vizinhos: enquadra os dois
+    const xs = same.map((q) => toRot(q.x, q.y)[0]), lo = Math.min(...xs), hi = Math.max(...xs);
+    fx = (lo + hi) / 2;
+    z = Math.max(zMin(), Math.min(z, ((W - 120) / ((hi - lo) * pw || 1)), zMax()));
+  }
   // os rótulos de KM ficam na base do desenho: centraliza um pouco acima, onde estão os trilhos, mantendo o alfinete à vista
   const cy = Math.max(0.15, fy - 0.26);
   const t = clampView({ z, x: W / 2 - fx * pw * z, y: (H - DOCK_RESERVE()) / 2 - cy * ph * z });
@@ -350,7 +361,7 @@ export const isOpen = () => opened;
 export const onClose = (fn) => { onCloseCb = fn; };
 let stateCb = null;
 export const onState = (fn) => { stateCb = fn; };
-function emitState() { stateCb?.({ path: curPath, page: pageNum, km: pins[0]?.km || 0 }); }
+function emitState() { stateCb?.({ path: curPath, page: pageNum, km: pins[0] ? (pins[0].q || pins[0].km) : 0 }); }
 
 function setProgress(f) {
   el.progress.classList.remove('done');
@@ -509,7 +520,7 @@ el.dlMenu.addEventListener('click', async (e) => {
   const label = mode === 'dark' ? 'escuro' : 'claro';
   toast(`Preparando PDF ${label}…`); el.dl.classList.add('busy');
   try {
-    const { downloadPdf } = await import('./pdfexport.js?v=202610221243');
+    const { downloadPdf } = await import('./pdfexport.js?v=202610221254');
     await downloadPdf(encodeURI(curPath), mode, `${base}-${label}.pdf`, (f) => { if (f > 0 && f < 1) setProgress(f); });
     el.progress.classList.add('done'); toast(`PDF ${label} baixado`);
   } catch (err) { console.warn(err); toast('Não foi possível gerar o PDF. Baixando o original.'); const a = document.createElement('a'); a.href = encodeURI(curPath); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }

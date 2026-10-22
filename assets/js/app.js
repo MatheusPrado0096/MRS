@@ -1,6 +1,6 @@
 /* Portal de Pátios • MRS — interface */
-import * as Viewer from './viewer.js?v=202610221243';
-import * as Km from './km.js?v=202610221243';
+import * as Viewer from './viewer.js?v=202610221254';
+import * as Km from './km.js?v=202610221254';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,9 +13,9 @@ const store = {
 
 /* ---------------- dados ---------------- */
 let META = {};
-try { const r = await fetch('data/meta.json?v=202610221243', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
+try { const r = await fetch('data/meta.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
 Viewer.setMeta(META);
-try { const r = await fetch('data/kms.json?v=202610221243', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
+try { const r = await fetch('data/kms.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
 const hasMeta = Object.keys(META).length > 0;
 const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
 
@@ -136,8 +136,8 @@ function kmCard(r, q, kind) {
     const h = r.hits?.[0];
     chips = kind === 'exact'
       ? `<span class="ok">✓ Neste pátio</span><span>página ${h.page}</span>${h.between[0] !== h.between[1] ? `<span>entre ${Km.fmtKm(Math.min(...h.between))} e ${Km.fmtKm(Math.max(...h.between))}</span>` : '<span>sobre um marco da planta</span>'}${r.hits.length > 1 ? `<span class="warn">${r.hits.length} pontos possíveis</span>` : ''}`
-      : `<span class="warn">≈ ${r.dist} m do marco ${Km.fmtKm(r.mark.km)}</span><span>página ${r.page}</span>`;
-    act = `<button class="btn primary" data-act="km-open" data-p="${esc(p.id)}" data-km="${q.m}" ${p.plantaOk ? '' : 'disabled'}><svg class="ic"><use href="#i-pin"/></svg>${kind === 'exact' ? 'Ver na planta' : 'Ver mais próximo'}</button>`;
+      : `<span class="warn">Trecho entre ${r.lower ? Km.fmtKm(r.lower.mark.km) : '—'} e ${r.upper ? Km.fmtKm(r.upper.mark.km) : '—'}</span>${r.lower ? `<span>${q.m - r.lower.mark.km} m depois de ${Km.fmtKm(r.lower.mark.km)}</span>` : ''}${r.upper ? `<span>${r.upper.mark.km - q.m} m antes de ${Km.fmtKm(r.upper.mark.km)}</span>` : ''}`;
+    act = `<button class="btn primary" data-act="km-open" data-p="${esc(p.id)}" data-km="${q.m}" ${p.plantaOk ? '' : 'disabled'}><svg class="ic"><use href="#i-pin"/></svg>${kind === 'exact' ? 'Ver na planta' : 'Ver trecho na planta'}</button>`;
   }
   return `<article class="card km">
     ${thumbHtml(p.thumb, p.plantaOk, 'Planta ainda não enviada', q.lo !== undefined ? 'plant' : 'km-open', `data-p="${esc(p.id)}" data-km="${q.m || ''}"`)}<span class="badge">${esc(p.id)}</span>${p.pages ? `<span class="pages">${p.pages} pág.</span>` : ''}</button>
@@ -151,10 +151,15 @@ function kmCard(r, q, kind) {
 }
 function kmBlock(q) {
   const r = Km.searchKm(q);
-  const list = r.exact.length ? r.exact.map((x) => kmCard(x, q, 'exact')) : r.near.map((x) => kmCard(x, q, 'near'));
+  let tr = [];
+  if (!r.exact.length && r.between) {   // trecho entre os dois marcos mais próximos (pode estar em pátios diferentes)
+    const { lower, upper } = r.between, ids = [...new Set([lower?.id, upper?.id].filter(Boolean))];
+    tr = ids.map((id) => ({ id, range: Km.rangeOf(id), lower: lower?.id === id ? lower : null, upper: upper?.id === id ? upper : null }));
+  }
+  const list = r.exact.length ? r.exact.map((x) => kmCard(x, q, 'exact')) : tr.map((x) => kmCard(x, q, 'between'));
   let head;
   if (r.exact.length) head = `<b>${q.label}</b><small>${q.lo !== undefined ? `${r.exact.length} pátio(s) com marcos nesta faixa` : r.exact.length === 1 ? 'Encontrado em 1 pátio — toque em "Ver na planta" para ver o alfinete' : `Encontrado em ${r.exact.length} pátios`}</small>`;
-  else if (r.near.length) head = `<b>${q.label}</b><small>Nenhum pátio cobre exatamente este KM. Mostrando o mais próximo.</small>`;
+  else if (tr.length) head = `<b>${q.label}</b><small>KM exato não encontrado. Ele fica no trecho entre ${r.between.lower ? Km.fmtKm(r.between.lower.mark.km) : '—'} e ${r.between.upper ? Km.fmtKm(r.between.upper.mark.km) : '—'}.</small>`;
   else head = `<b>${q.label}</b><small>Nenhum pátio com marcos perto deste KM nas plantas cadastradas.</small>`;
   return { html: `<div class="kmbox"><svg class="ic"><use href="#i-pin"/></svg><div>${head}</div></div>` + list.join(''), count: list.length };
 }

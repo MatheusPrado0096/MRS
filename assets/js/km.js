@@ -22,6 +22,7 @@ export function parseKm(text) {
 }
 const exact = (m) => ({ m, label: 'km ' + fmtKm(m) });
 
+export const rangeOf = (id) => DB[id] && range(DB[id]);
 const range = (y) => {
   const all = y.pages.flatMap((p) => p.marks.map((k) => k.km));
   return { min: Math.min(...all), max: Math.max(...all) };
@@ -38,7 +39,7 @@ function locate(y, km) {
       const lo = Math.min(a.km, b.km), hi = Math.max(a.km, b.km);
       if (km < lo || km > hi) continue;
       const k = (km - a.km) / (b.km - a.km);
-      hits.push({ page: pg.page, x: a.x + (b.x - a.x) * k, y: (a.y + b.y) / 2, between: [a.km, b.km] });
+      hits.push({ page: pg.page, x: a.x + (b.x - a.x) * k, y: (a.y + b.y) / 2, between: [a.km, b.km], span: [a.x, b.x] });
     }
     const eq = ms.find((m) => m.km === km);               // exatamente sobre um rótulo
     if (eq && !hits.some((h) => h.page === pg.page && Math.abs(h.x - eq.x) < 0.004)) hits.unshift({ page: pg.page, x: eq.x, y: eq.y, between: [km, km] });
@@ -50,10 +51,11 @@ function locate(y, km) {
 /**
  * Procura um KM. Retorna { exact: [{id, planta, range, hits}], near: [{id, planta, dist, mark, page}] }
  *  - exact: pátios cujos rótulos "cercam" o KM (com ponto na planta);
- *  - near:  se ninguém cercar, os pátios com o rótulo mais próximo.
+ *  - between: se nenhum trecho desenhado cobrir o KM, os dois marcos mais próximos dele (um antes, outro depois),
+ *    em qualquer pátio: { lower, upper } com { id, page, mark, dist }.
  */
 export function searchKm(q, { nearMax = 5000 } = {}) {
-  const res = { exact: [], near: [] };
+  const res = { exact: [], between: null };
   if (q.lo !== undefined) {   // km inteiro: lista os pátios que têm rótulos nessa faixa
     for (const [id, y] of Object.entries(DB)) {
       const r = range(y);
@@ -66,30 +68,42 @@ export function searchKm(q, { nearMax = 5000 } = {}) {
     if (hits.length) res.exact.push({ id, planta: y.planta, range: range(y), hits });
   }
   if (!res.exact.length) {
-    for (const [id, y] of Object.entries(DB)) {
-      let best = null;
-      for (const pg of y.pages) for (const m of pg.marks) {
-        const d = Math.abs(m.km - q.m);
-        if (!best || d < best.dist) best = { dist: d, mark: m, page: pg.page };
-      }
-      if (best && best.dist <= nearMax) res.near.push({ id, planta: y.planta, range: range(y), ...best });
-    }
-    res.near.sort((a, b) => a.dist - b.dist);
-    res.near = res.near.slice(0, 3);
+    const n = neighbors(q.m), far = 30000;    // marcos a mais de 30 km não servem de referência
+    if (n.lower && n.lower.dist > far) n.lower = null;
+    if (n.upper && n.upper.dist > far) n.upper = null;
+    res.between = n.lower || n.upper ? n : null;
   }
   return res;
 }
 
-/** Pontos (alfinetes) para o visualizador, a partir de um pátio e um KM. */
+/** Marco mais próximo abaixo e acima do KM (entre todos os pátios, ou só em `only`). */
+export function neighbors(km, only) {
+  let lower = null, upper = null;
+  for (const [id, y] of Object.entries(DB)) {
+    if (only && id !== only) continue;
+    for (const pg of y.pages) for (const m of pg.marks) {
+      const d = m.km - km;
+      if (d <= 0 && (!lower || m.km > lower.mark.km)) lower = { id, page: pg.page, mark: m, dist: -d };
+      if (d >= 0 && (!upper || m.km < upper.mark.km)) upper = { id, page: pg.page, mark: m, dist: d };
+    }
+  }
+  return { lower, upper };
+}
+
+/** Pontos para o visualizador: alfinete no ponto estimado + faixa do trecho; ou, sem trecho desenhado, os dois marcos vizinhos. */
 export function pinsFor(id, km) {
   const y = DB[id]; if (!y) return [];
   const hits = locate(y, km);
-  if (hits.length) return hits.map((h) => ({ ...h, km }));
-  // fora dos rótulos: encosta no rótulo mais próximo
-  let best = null;
-  for (const pg of y.pages) for (const m of pg.marks) {
-    const d = Math.abs(m.km - km); if (!best || d < best.d) best = { d, page: pg.page, x: m.x, y: m.y };
+  if (hits.length) {
+    return hits.map((h) => ({ page: h.page, x: h.x, y: h.y, km, q: km, span: h.span, chip: `km ${fmtKm(km)} • entre ${fmtKm(Math.min(...h.between))} e ${fmtKm(Math.max(...h.between))}` }));
   }
-  return best ? [{ page: best.page, x: best.x, y: best.y, km, approx: true }] : [];
+  const { lower, upper } = neighbors(km, id);
+  const out = [];
+  for (const n of [lower, upper]) if (n) out.push({ page: n.page, x: n.mark.x, y: n.mark.y, km: n.mark.km, q: km, mark: true });
+  if (lower && upper && lower.page === upper.page && upper.mark.km - lower.mark.km <= MAX_SEG) {
+    out.forEach((p) => { p.span = [lower.mark.x, upper.mark.x]; });
+  }
+  if (out.length) out[0].chip = `km ${fmtKm(km)} • entre ${lower ? fmtKm(lower.mark.km) : '—'} e ${upper ? fmtKm(upper.mark.km) : '—'}`;
+  return out;
 }
 export const plantaOf = (id) => DB[id]?.planta;
