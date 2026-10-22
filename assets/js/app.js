@@ -1,0 +1,276 @@
+/* Portal de Pátios • MRS — interface */
+import * as Viewer from './viewer.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+/* ---------------- dados ---------------- */
+let META = {};
+try { const r = await fetch('data/meta.json', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
+Viewer.setMeta(META);
+const hasMeta = Object.keys(META).length > 0;
+const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
+
+const RAW = Array.isArray(window.PATIOS) ? window.PATIOS : [];
+const yards = RAW.map((p) => ({
+  ...p, plantaOk: avail(p.planta), thumb: META[p.planta]?.thumb, pages: META[p.planta]?.pages,
+}));
+const items = yards.flatMap((p) => (p.itens || []).map((i) => {
+  const type = p.categoria === 'CX' ? 'CX' : /pn/i.test(i.tipo) ? 'PN' : 'Abrigo';
+  return {
+    ...i, type, pid: p.id, pnome: p.nome, plabel: p.label, ok: avail(i.pdf), thumb: META[i.pdf]?.thumb, pages: META[i.pdf]?.pages,
+    badge: i.codigo === i.nome ? p.id : i.codigo,
+  };
+}));
+const byPath = new Map();
+yards.forEach((p) => byPath.set(p.planta, { title: `${p.id} • Planta geral`, sub: p.nome, link: '' }));
+items.forEach((i) => byPath.set(i.pdf, { title: `${i.nome} • ${i.codigo === i.nome ? i.pid : i.codigo}`, sub: `${i.pid} • ${i.pnome}`, link: i.link }));
+// pdf compartilhado por vários itens: o primeiro vence o título, o restante só adiciona o link
+const itemByCode = new Map(items.map((i) => [i.codigo, i]));
+
+/* ---------------- favoritos ---------------- */
+let favs = new Set(JSON.parse(store.get('mrs-favs', '[]') || '[]'));
+const saveFavs = () => store.set('mrs-favs', JSON.stringify([...favs]));
+
+/* ---------------- tema ---------------- */
+const root = document.documentElement;
+function applyTheme(t, persist) {
+  root.dataset.theme = t;
+  $('#themeIcon').setAttribute('href', t === 'dark' ? '#i-sun' : '#i-moon');
+  $('meta[name=theme-color]').setAttribute('content', t === 'dark' ? '#031221' : '#00335e');
+  if (persist) store.set('mrs-theme', t);
+}
+applyTheme(root.dataset.theme || 'light');
+$('#themeBtn').onclick = () => { applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true); };
+
+/* ---------------- toast ---------------- */
+let toastT = 0;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400);
+}
+Viewer.setToast(toast);
+
+/* ---------------- cards ---------------- */
+const hl = (text, terms) => {
+  let out = esc(text);
+  if (!terms?.length) return out;
+  const n = norm(text); // índices equivalentes (normalização preserva tamanho na maioria dos casos)
+  if (n.length !== String(text).length) return out;
+  const ranges = [];
+  terms.forEach((t) => { let i = -1; while ((i = n.indexOf(t, i + 1)) !== -1) ranges.push([i, i + t.length]); });
+  if (!ranges.length) return out;
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  ranges.forEach((r) => { const l = merged[merged.length - 1]; if (l && r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else merged.push([...r]); });
+  let res = '', pos = 0; const src = String(text);
+  merged.forEach(([a, b]) => { res += esc(src.slice(pos, a)) + '<mark>' + esc(src.slice(a, b)) + '</mark>'; pos = b; });
+  return res + esc(src.slice(pos));
+};
+function thumbHtml(url, ok, label, act, data) {
+  const inner = url
+    ? `<img src="${esc(url)}" alt="" loading="lazy" decoding="async">`
+    : `<div class="empty-in"><svg class="ic"><use href="#i-file"/></svg><span>${esc(label)}</span></div>`;
+  return `<button class="thumb${url ? '' : ' no-doc'}" type="button" ${ok ? `data-act="${act}" ${data}` : 'disabled'} aria-label="${ok ? 'Abrir documento' : 'Documento indisponível'}">${inner}`;
+}
+function yardCard(p, terms) {
+  const n = p.itens?.length || 0;
+  return `<article class="card yard">
+    ${thumbHtml(p.thumb, p.plantaOk, 'Planta ainda não enviada', 'plant', `data-p="${esc(p.id)}"`)}<span class="badge">${hl(p.id, terms)}</span>${p.pages ? `<span class="pages">${p.pages} ${p.pages > 1 ? 'páginas' : 'página'}</span>` : ''}</button>
+    <div class="card-body">
+      <span class="tag">${esc(p.label)}</span>
+      <h3>${hl(p.nome, terms)}</h3>
+      <p>${n} ${n === 1 ? 'item' : 'itens'} cadastrado${n === 1 ? '' : 's'}</p>
+      <div class="actions">
+        <button class="btn primary" data-act="plant" data-p="${esc(p.id)}" ${p.plantaOk ? '' : 'disabled'}><svg class="ic"><use href="#i-map"/></svg>${p.plantaOk ? 'Abrir planta' : 'Planta em breve'}</button>
+        <button class="btn" data-act="list" data-p="${esc(p.id)}">Ver ${esc(p.label)}</button>
+      </div>
+    </div></article>`;
+}
+function itemCard(i, terms) {
+  const fav = favs.has(i.codigo);
+  return `<article class="card">
+    ${thumbHtml(i.thumb, i.ok, 'PDF ainda não enviado', 'pdf', `data-code="${esc(i.codigo)}"`)}<span class="badge">${hl(i.badge, terms)}</span>${i.pages ? `<span class="pages">${i.pages} ${i.pages > 1 ? 'páginas' : 'página'}</span>` : ''}</button>
+    <button class="fav" data-act="fav" data-code="${esc(i.codigo)}" aria-pressed="${fav}" aria-label="${fav ? 'Remover dos favoritos' : 'Favoritar'}"><svg class="ic"><use href="#i-star"/></svg></button>
+    <div class="card-body">
+      <span class="tag">${esc(i.type)}</span>
+      <h3>${hl(i.nome, terms)}</h3>
+      <p>${hl(i.pid + ' • ' + i.pnome, terms)}${i.km ? ' • km ' + esc(i.km) : ''}</p>
+      <div class="actions">
+        <button class="btn primary" data-act="pdf" data-code="${esc(i.codigo)}" ${i.ok ? '' : 'disabled'}><svg class="ic"><use href="#i-file"/></svg>${i.ok ? 'Abrir PDF' : 'PDF em breve'}</button>
+        ${i.link ? `<a class="btn" href="${esc(i.link)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir localização no mapa"><svg class="ic"><use href="#i-pin"/></svg>Local</a>` : `<button class="btn" disabled><svg class="ic"><use href="#i-pin"/></svg>Local</button>`}
+      </div>
+    </div></article>`;
+}
+const io = 'IntersectionObserver' in window ? new IntersectionObserver((es) => {
+  es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { rootMargin: '0px 0px -40px 0px', threshold: 0.05 }) : null;
+function mount(container, html) {
+  container.innerHTML = html;
+  $$('.card', container).forEach((c, idx) => {
+    c.style.transitionDelay = Math.min(idx % 9, 8) * 55 + 'ms';
+    io ? io.observe(c) : c.classList.add('in');
+    const img = $('img', c);
+    if (img) { const ok = () => img.classList.add('ok'); img.complete ? ok() : (img.onload = ok, img.onerror = () => img.remove()); }
+  });
+  // remove o atraso depois da entrada para o hover ficar instantâneo
+  setTimeout(() => $$('.card', container).forEach((c) => (c.style.transitionDelay = '')), 1400);
+}
+const emptyBox = (t, s) => `<div class="empty"><b>${esc(t)}</b>${esc(s)}</div>`;
+
+/* ---------------- estatísticas ---------------- */
+function renderStats() {
+  const docs = (hasMeta ? Object.keys(META).length : yards.length + items.length);
+  const data = [[yards.length, 'Pátios'], [items.length, 'Equipamentos'], [docs, 'PDFs']];
+  $('#stats').innerHTML = data.map(([n, l]) => `<div class="stat"><dd data-n="${n}">0</dd><dt>${l}</dt></div>`).join('');
+  $$('#stats dd').forEach((d) => {
+    const n = +d.dataset.n, t0 = performance.now(), dur = 1100;
+    const step = (now) => { const k = Math.min(1, (now - t0) / dur); d.textContent = Math.round(n * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+
+/* ---------------- estado + renderização ---------------- */
+const S = { tab: 'patios', yard: '', fav: false, q: '', type: '' };
+
+function renderYards() {
+  $('#yardCount').textContent = yards.length + ' pátios';
+  mount($('#yardCards'), yards.length ? yards.map((p) => yardCard(p)).join('') : emptyBox('Nenhum pátio cadastrado', 'Edite o arquivo data.js para adicionar pátios.'));
+}
+function renderEquip() {
+  const chips = [`<button class="chip" aria-pressed="${!S.yard && !S.fav}" data-act="chip-yard" data-p="">Todos<small>${items.length}</small></button>`,
+    `<button class="chip" aria-pressed="${S.fav}" data-act="chip-fav">★ Favoritos<small>${favs.size}</small></button>`,
+    ...yards.map((p) => `<button class="chip" aria-pressed="${S.yard === p.id && !S.fav}" data-act="chip-yard" data-p="${esc(p.id)}">${esc(p.id)}<small>${p.itens?.length || 0}</small></button>`)].join('');
+  $('#yardChips').innerHTML = chips;
+  const y = yards.find((p) => p.id === S.yard);
+  $('#equipTitle').textContent = S.fav ? 'Favoritos' : y ? `${y.id} • ${y.nome}` : 'Abrigos, PN e CX';
+  const r = items.filter((i) => (S.fav ? favs.has(i.codigo) : !S.yard || i.pid === S.yard));
+  $('#equipCount').textContent = r.length + (r.length === 1 ? ' item' : ' itens');
+  mount($('#equipCards'), r.length ? r.map((i) => itemCard(i)).join('') : emptyBox(S.fav ? 'Nenhum favorito ainda' : 'Nada por aqui', S.fav ? 'Toque na estrela de um item para guardá-lo aqui.' : 'Este pátio não tem itens cadastrados.'));
+  $('#yardChips .chip[aria-pressed=true]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+}
+function renderSearch() {
+  const terms = norm(S.q).split(/\s+/).filter(Boolean);
+  const types = ['', 'Abrigo', 'PN', 'CX'];
+  $('#typeChips').innerHTML = types.map((t) => `<button class="chip" aria-pressed="${S.type === t}" data-act="chip-type" data-t="${t}">${t || 'Todos'}</button>`).join('');
+  $('#clearBtn').hidden = !S.q;
+  const hit = (txt) => terms.every((t) => txt.includes(t));
+  const ri = items.filter((i) => (!S.type || i.type === S.type) && hit(norm(`${i.tipo} ${i.type} ${i.nome} ${i.codigo} ${i.pid} ${i.pnome} ${i.plabel}`)));
+  const ry = S.type ? [] : (terms.length ? yards.filter((p) => hit(norm(`${p.id} ${p.nome} ${p.label}`))) : []);
+  $('#resultCount').textContent = (ri.length + ry.length) + (ri.length + ry.length === 1 ? ' resultado' : ' resultados');
+  let html = '';
+  if (ry.length) html += `<h3 class="sub-head">Pátios</h3>` + ry.map((p) => yardCard(p, terms)).join('');
+  if (ri.length) html += (ry.length ? `<h3 class="sub-head">Equipamentos</h3>` : '') + ri.map((i) => itemCard(i, terms)).join('');
+  mount($('#results'), html || emptyBox('Nenhum resultado', 'Tente outro código, nome de pátio ou tipo.'));
+}
+
+/* ---------------- abas ---------------- */
+const tabsEl = $('#tabs'), ind = $('.tab-ind');
+function moveInd() {
+  const t = $('.tab[aria-selected=true]', tabsEl) || $('.tab', tabsEl);
+  ind.style.width = t.offsetWidth + 'px'; ind.style.transform = `translateX(${t.offsetLeft}px)`;
+}
+function showTab(id, instant) {
+  S.tab = id;
+  $$('.tab').forEach((t) => t.setAttribute('aria-selected', t.dataset.tab === id));
+  $$('.panel').forEach((p) => { const on = p.id === id; if (on && p.hidden) { p.hidden = false; } else if (!on) p.hidden = true; });
+  if (id === 'equipamentos') renderEquip();
+  if (id === 'pesquisa') renderSearch();
+  moveInd();
+  if (!instant) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+addEventListener('resize', moveInd);
+document.fonts?.ready.then(moveInd);
+
+/* ---------------- roteamento por hash ---------------- */
+// #patios | #equipamentos/FSJ | #pesquisa  (+ ?ver=docs/x.pdf&p=2 quando o visualizador está aberto)
+function parseHash() {
+  const raw = decodeURIComponent(location.hash.slice(1)), [path, qs = ''] = raw.split('?');
+  const [tab, arg = ''] = path.split('/'), params = new URLSearchParams(qs);
+  return { tab: ['patios', 'equipamentos', 'pesquisa'].includes(tab) ? tab : 'patios', arg, ver: params.get('ver'), p: +params.get('p') || 1 };
+}
+const baseHash = (tab = S.tab) => '#' + tab + (tab === 'equipamentos' && S.yard ? '/' + S.yard : '');
+let viewerPushed = false;
+function route(first) {
+  const h = parseHash();
+  if (h.tab === 'equipamentos') { S.yard = yards.some((p) => p.id === h.arg) ? h.arg : ''; S.fav = false; }
+  if (h.tab !== S.tab || first) showTab(h.tab, true);
+  else if (h.tab === 'equipamentos') renderEquip();
+  if (h.ver && byPath.has(h.ver) && avail(h.ver)) {
+    const m = byPath.get(h.ver);
+    Viewer.open({ path: h.ver, title: m.title, sub: m.sub, link: m.link, page: h.p });
+  } else if (Viewer.isOpen()) Viewer.close(true);
+}
+addEventListener('hashchange', () => route(false));
+Viewer.onClose(() => {
+  if (viewerPushed) { viewerPushed = false; history.back(); }
+  else { history.replaceState(null, '', baseHash()); route(false); }
+});
+Viewer.onState(({ path, page }) => {
+  if (!parseHash().ver) return;
+  history.replaceState(null, '', `${baseHash()}?ver=${encodeURIComponent(path)}${page > 1 ? '&p=' + page : ''}`);
+});
+function openDoc(path, code) {
+  if (!path || !avail(path)) return toast('Este PDF ainda não foi enviado.');
+  viewerPushed = true;
+  const it = code && itemByCode.get(code);
+  const m = byPath.get(path) || {};
+  if (it) { m.link = it.link; byPath.set(path, { ...m, title: `${it.nome} • ${it.badge}`, sub: `${it.pid} • ${it.pnome}`, link: it.link }); }
+  location.hash = `${baseHash()}?ver=${encodeURIComponent(path)}`;
+}
+
+/* ---------------- eventos ---------------- */
+$$('.tab').forEach((t) => (t.onclick = () => {
+  const id = t.dataset.tab; if (id === S.tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
+  location.hash = '#' + id + (id === 'equipamentos' && S.yard ? '/' + S.yard : '');
+}));
+$('#goSearch').onclick = () => { location.hash = '#pesquisa'; setTimeout(() => $('#search').focus(), 60); };
+$('.brand').addEventListener('click', (e) => { if (S.tab === 'patios') { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'plant') { const p = yards.find((x) => x.id === b.dataset.p); p && openDoc(p.planta); }
+  else if (act === 'pdf') { const i = itemByCode.get(b.dataset.code); i && openDoc(i.pdf, i.codigo); }
+  else if (act === 'list') { location.hash = '#equipamentos/' + b.dataset.p; window.scrollTo({ top: 0 }); }
+  else if (act === 'chip-yard') { S.yard = b.dataset.p; S.fav = false; history.replaceState(null, '', baseHash('equipamentos')); renderEquip(); }
+  else if (act === 'chip-fav') { S.fav = !S.fav; if (S.fav) S.yard = ''; renderEquip(); }
+  else if (act === 'chip-type') { S.type = b.dataset.t; renderSearch(); }
+  else if (act === 'fav') {
+    const c = b.dataset.code, on = !favs.has(c); on ? favs.add(c) : favs.delete(c); saveFavs();
+    b.setAttribute('aria-pressed', on); b.setAttribute('aria-label', on ? 'Remover dos favoritos' : 'Favoritar');
+    $$(`.fav[data-code="${CSS.escape(c)}"]`).forEach((x) => x.setAttribute('aria-pressed', on));
+    const fc = $('[data-act=chip-fav] small'); if (fc) fc.textContent = favs.size;
+    toast(on ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+    if (S.fav && !on && S.tab === 'equipamentos') renderEquip();
+  }
+});
+// efeito "ripple" nos botões
+document.addEventListener('pointerdown', (e) => {
+  const b = e.target.closest('.btn:not([disabled])'); if (!b) return;
+  const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height), d = document.createElement('span');
+  d.className = 'rip'; d.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+  b.appendChild(d); setTimeout(() => d.remove(), 650);
+});
+
+let st = 0;
+$('#search').addEventListener('input', (e) => { S.q = e.target.value; clearTimeout(st); st = setTimeout(renderSearch, 90); });
+$('#clearBtn').onclick = () => { S.q = ''; S.type = ''; $('#search').value = ''; renderSearch(); $('#search').focus(); };
+document.addEventListener('keydown', (e) => {
+  if (Viewer.isOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+  const typing = /input|textarea|select/i.test(e.target.tagName);
+  if (e.key === '/' && !typing) { e.preventDefault(); $('#goSearch').click(); }
+  if (e.key === 'Escape' && typing) e.target.blur();
+});
+
+/* ---------------- início ---------------- */
+renderStats();
+renderYards();
+route(true);
+if (S.tab !== 'patios') { /* stats só animam na primeira aba */ }
