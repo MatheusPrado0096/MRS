@@ -42,7 +42,7 @@ assets/js/app.js      interface, busca, rotas
 assets/js/viewer.js   visualizador de PDF
 assets/vendor/pdfjs   pdf.js (Apache-2.0)
 assets/img/           logo e ícones
-tools/                scripts auxiliares
+tools/                scripts auxiliares.
 ```
 
 ## Observações sobre os dados recebidos
