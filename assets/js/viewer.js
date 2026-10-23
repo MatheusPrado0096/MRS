@@ -2,7 +2,7 @@
  * Renderiza apenas a região visível (mais margem), então fica nítido em qualquer ampliação
  * sem estourar a memória do celular. Durante o gesto usa transformação CSS (60 fps). */
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
-import { fmtKm } from './km.js?v=202610231833';
+import { fmtKm } from './km.js?v=202610231908';
 
 const BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
 pdfjs.GlobalWorkerOptions.workerSrc = BASE + 'pdf.worker.min.mjs';
@@ -522,7 +522,7 @@ el.dlMenu.addEventListener('click', async (e) => {
   const label = mode === 'dark' ? 'escuro' : 'claro';
   toast(`Preparando PDF ${label}…`); el.dl.classList.add('busy');
   try {
-    const { downloadPdf } = await import('./pdfexport.js?v=202610231833');
+    const { downloadPdf } = await import('./pdfexport.js?v=202610231908');
     await downloadPdf(encodeURI(curPath), mode, `${base}-${label}.pdf`, (f) => { if (f > 0 && f < 1) setProgress(f); });
     el.progress.classList.add('done'); toast(`PDF ${label} baixado`);
   } catch (err) { console.warn(err); toast('Não foi possível gerar o PDF. Baixando o original.'); const a = document.createElement('a'); a.href = encodeURI(curPath); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }

@@ -69,8 +69,10 @@ tools/                scripts auxiliares
 - `IEF10` apontava para `IEF01.pdf` (mesmo arquivo do `IEF01`); apontei para `IEF02.pdf`, que existia sem uso. Se não for isso, ajuste em `data.js`.
 
 
-## Aba Estudos e Portal de acesso
-- A aba **Estudos** lista o material de aprendizagem por assunto (AMVs/Travador, Sinalização, Registrador Wabtec, Projetos/Aspect Charts, Ferrovias). Os PDFs ficam em `docs/estudos/<assunto>/` e são descritos em `data/estudos.json`.
+## Aba Aprendizagem, Portal de acesso e Comentários
+- A aba **Aprendizagem** mostra um card por assunto e, dentro dele, os documentos. A pesquisa (na própria aba e na aba Pesquisa) procura no título e no **conteúdo** dos PDFs, e abre na página encontrada. Ela lista o material de aprendizagem por assunto (AMVs/Travador, Sinalização, Registrador Wabtec, Projetos/Aspect Charts, Ferrovias). Os PDFs ficam em `docs/estudos/<assunto>/` e são descritos em `data/estudos.json`.
 - Para adicionar um material: copie o PDF para a pasta do assunto, acrescente uma entrada em `data/estudos.json` (ou crie um assunto novo) e rode `python3 tools/gerar-miniaturas.py` e `python3 tools/versionar.py`.
 - Os PDFs de estudo abrem **coloridos** (as plantas continuam em preto e branco).
 - O botão **Portal** no menu (e o cartão no topo de Estudos) abre https://linktr.ee/MRSPinheirinho em outra aba.
+- Para a pesquisa por conteúdo, rode também `python3 tools/indexar-aprendizagem.py` (usa o texto do PDF e faz OCR nas páginas escaneadas; requer tesseract-ocr).
+- O balão de fala no topo abre **Comentários e sugestões**. Para definir o destino das mensagens, edite `data/config.json` (`email` e/ou `whatsapp` com DDI+DDD, só números). Sem isso, o botão apenas copia a mensagem. Com e-mail, o envio usa o serviço formsubmit.co (o primeiro envio pede uma confirmação por e-mail).

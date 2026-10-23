@@ -1,6 +1,6 @@
 /* Portal de Pátios • MRS — interface */
-import * as Viewer from './viewer.js?v=202610231833';
-import * as Km from './km.js?v=202610231833';
+import * as Viewer from './viewer.js?v=202610231908';
+import * as Km from './km.js?v=202610231908';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,11 +13,13 @@ const store = {
 
 /* ---------------- dados ---------------- */
 let META = {};
-try { const r = await fetch('data/meta.json?v=202610231833', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
+try { const r = await fetch('data/meta.json?v=202610231908', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
 Viewer.setMeta(META);
-try { const r = await fetch('data/kms.json?v=202610231833', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
+try { const r = await fetch('data/kms.json?v=202610231908', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
 let ESTUDOS = [];
 try { const r = await fetch('data/estudos.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) ESTUDOS = await r.json(); } catch {}
+let CONFIG = {};
+try { const r = await fetch('data/config.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) CONFIG = await r.json(); } catch {}
 const hasMeta = Object.keys(META).length > 0;
 const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
 
@@ -35,7 +37,7 @@ const items = yards.flatMap((p) => (p.itens || []).map((i) => {
 const byPath = new Map();
 yards.forEach((p) => byPath.set(p.planta, { title: `${p.id} • Planta geral`, sub: p.nome, link: '' }));
 items.forEach((i) => byPath.set(i.pdf, { title: `${i.nome} • ${i.codigo === i.nome ? i.pid : i.codigo}`, sub: `${i.pid} • ${i.pnome}`, link: i.link }));
-ESTUDOS.forEach((c) => c.docs.forEach((d) => { d.ok = avail(d.pdf); d.thumb = META[d.pdf]?.thumb; d.pages = META[d.pdf]?.pages; d.kb = META[d.pdf]?.kb; byPath.set(d.pdf, { title: d.titulo, sub: `Estudos • ${c.nome}`, link: '' }); }));
+ESTUDOS.forEach((c) => c.docs.forEach((d) => { d.ok = avail(d.pdf); d.thumb = META[d.pdf]?.thumb; d.pages = META[d.pdf]?.pages; d.kb = META[d.pdf]?.kb; byPath.set(d.pdf, { title: d.titulo, sub: `Aprendizagem • ${c.nome}`, link: '' }); }));
 // pdf compartilhado por vários itens: o primeiro vence o título, o restante só adiciona o link
 const itemByCode = new Map(items.map((i) => [i.codigo, i]));
 
@@ -209,40 +211,104 @@ function renderSearch() {
   const kb = kq ? kmBlock(kq) : null;
   const ri = items.filter((i) => (!S.type || i.type === S.type) && hit(norm(`${i.tipo} ${i.type} ${i.nome} ${i.codigo} ${i.pid} ${i.pnome} ${i.plabel}`)));
   const ry = S.type ? [] : (terms.length ? yards.filter((p) => hit(norm(`${p.id} ${p.nome} ${p.label}`))) : []);
-  const total = ri.length + ry.length + (kb ? kb.count : 0);
+  const rs = S.type || !terms.length ? [] : searchEstudos(terms);
+  if (terms.length && !TEXTO) loadTexto(() => S.tab === 'pesquisa' && renderSearch());
+  const total = ri.length + ry.length + rs.length + (kb ? kb.count : 0);
   $('#resultCount').textContent = total + (total === 1 ? ' resultado' : ' resultados');
   let html = kb && (kb.count || q6(S.q)) ? kb.html : '';
   if (ry.length) html += `<h3 class="sub-head">Pátios</h3>` + ry.map((p) => yardCard(p, terms)).join('');
   if (ri.length) html += (ry.length ? `<h3 class="sub-head">Equipamentos</h3>` : '') + ri.map((i) => itemCard(i, terms)).join('');
-  mount($('#results'), html || emptyBox('Nenhum resultado', 'Tente outro código, nome de pátio, tipo ou KM (ex.: 364+520).'));
+  if (rs.length) html += `<h3 class="sub-head">Aprendizagem</h3>` + rs.map((r) => studyCard(r.d, r.c, r, terms)).join('');
+  mount($('#results'), html || emptyBox('Nenhum resultado', 'Tente outro código, nome de pátio, tipo, KM (ex.: 364+520) ou assunto de estudo.'));
 }
 
 const q6 = (t) => /\+|\d{6}|[.,]/.test(t);   // forma inequívoca de KM: mostra o aviso mesmo sem resultado
 
-/* ---------------- estudos ---------------- */
+/* ---------------- aprendizagem ---------------- */
 const fmtSize = (kb) => (kb >= 1024 ? (kb / 1024).toFixed(1).replace('.', ',') + ' MB' : (kb || 0) + ' KB');
-function studyCard(d, c) {
+const catOf = new Map(ESTUDOS.flatMap((c) => c.docs.map((d) => [d.pdf, c])));
+const docOf = new Map(ESTUDOS.flatMap((c) => c.docs.map((d) => [d.pdf, d])));
+
+// texto dos PDFs (pesquisa por conteúdo): carregado só quando alguém pesquisa
+let TEXTO = null, textoLoading = false;
+function loadTexto(then) {
+  if (TEXTO || textoLoading) return;
+  textoLoading = true;
+  fetch('data/aprendizagem-texto.json?v=202610221254').then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((j) => {
+    TEXTO = {};
+    for (const [k, v] of Object.entries(j)) TEXTO[k] = v.pages.map((t) => ({ raw: t, n: norm(t) }));
+    then?.();
+  });
+}
+/** Resultados da pesquisa: { c, d, titleHit, pages:[{p, snip}] } por documento. */
+function searchEstudos(terms) {
+  const out = [];
+  for (const c of ESTUDOS) for (const d of c.docs) {
+    const head = norm(`${d.titulo} ${d.desc} ${c.nome} ${c.desc}`);
+    const titleHit = terms.every((t) => head.includes(t));
+    const pages = [];
+    const tx = TEXTO?.[d.pdf];
+    if (tx) tx.forEach((pg, i) => {
+      if (!terms.every((t) => pg.n.includes(t))) return;
+      const at = pg.n.indexOf(terms[0]), from = Math.max(0, at - 50), same = pg.n.length === pg.raw.length;
+      const src = same ? pg.raw : pg.n;
+      pages.push({ p: i + 1, snip: (from ? '… ' : '') + src.slice(from, at + 110).trim() + ' …', score: terms.reduce((n, t) => n + pg.n.split(t).length - 1, 0) });
+    });
+    pages.sort((x, y) => y.score - x.score);
+    if (titleHit || pages.length) out.push({ c, d, titleHit, pages: pages.slice(0, 4), more: Math.max(0, pages.length - 4) });
+  }
+  return out.sort((x, y) => (y.titleHit - x.titleHit) || (y.pages.length - x.pages.length));
+}
+function studyCard(d, c, hit, terms = []) {
+  const pageList = hit?.pages.length ? `<ul class="hits">${hit.pages.map((h) => `<li><button data-act="study" data-pdf="${esc(d.pdf)}" data-p="${h.p}"><b>pág. ${h.p}</b><span>${hl(h.snip, terms)}</span></button></li>`).join('')}${hit.more ? `<li class="more">+ ${hit.more} páginas com o termo</li>` : ''}</ul>` : '';
   return `<article class="card study">
-    ${thumbHtml(d.thumb, d.ok, 'Em breve', 'study', `data-pdf="${esc(d.pdf)}"`)}<span class="pages">${d.pages ? d.pages + (d.pages > 1 ? ' páginas' : ' página') : ''}</span></button>
+    ${thumbHtml(d.thumb, d.ok, 'Em breve', 'study', `data-pdf="${esc(d.pdf)}"${hit?.pages[0] ? ` data-p="${hit.pages[0].p}"` : ''}`)}<span class="pages">${d.pages ? d.pages + (d.pages > 1 ? ' páginas' : ' página') : ''}</span></button>
     <div class="card-body">
       <span class="tag">${esc(c.nome)}</span>
-      <h3>${esc(d.titulo)}</h3>
-      <p>${esc(d.desc)}</p>
+      <h3>${hl(d.titulo, terms)}</h3>
+      <p>${hl(d.desc, terms)}</p>
+      ${pageList}
       <div class="actions"><button class="btn primary" data-act="study" data-pdf="${esc(d.pdf)}" ${d.ok ? '' : 'disabled'}><svg class="ic"><use href="#i-file"/></svg>${d.ok ? 'Abrir' : 'Em breve'}</button><span class="muted sz">${d.kb ? fmtSize(d.kb) : ''}</span></div>
     </div></article>`;
 }
+function catCard(c) {
+  const pg = c.docs.reduce((n, d) => n + (d.pages || 0), 0);
+  return `<button class="card cat" type="button" data-act="chip-cat" data-c="${c.id}">
+    <span class="cat-top"><span class="est-ic"><svg class="ic"><use href="#${c.icon}"/></svg></span><span class="cat-n">${c.docs.length}<small>${c.docs.length > 1 ? 'documentos' : 'documento'}</small></span></span>
+    <span class="cat-body"><b>${esc(c.nome)}</b><span>${esc(c.desc)}</span></span>
+    <span class="cat-foot"><span>${pg} páginas</span><span class="cat-go">Abrir <svg class="ic"><use href="#i-right"/></svg></span></span></button>`;
+}
 function renderEstudos() {
   if (!ESTUDOS.some((c) => c.id === S.cat)) S.cat = '';
+  const q = $('#estSearch').value.trim(), terms = norm(q).split(/\s+/).filter(Boolean);
+  $('#estClear').hidden = !q;
+  const crumb = $('#estCrumb'), rc = $('#estResultCount');
+  if (terms.length) {                       // pesquisa (em todos os assuntos)
+    loadTexto(() => S.tab === 'aprendizagem' && renderEstudos());
+    const res = searchEstudos(terms), n = res.reduce((s, r) => s + Math.max(r.pages.length, 1), 0);
+    crumb.hidden = true; rc.hidden = false;
+    rc.textContent = res.length ? `${res.length} ${res.length === 1 ? 'documento' : 'documentos'} • ${n} ${n === 1 ? 'ocorrência' : 'ocorrências'}${TEXTO ? '' : ' • lendo o conteúdo dos PDFs…'}` : (TEXTO ? 'Nenhum resultado' : 'Procurando…');
+    $('#estTitle').textContent = 'Resultados';
+    $('#estCount').textContent = '';
+    mount($('#estList'), res.length ? `<div class="grid">${res.map((r) => studyCard(r.d, r.c, r, terms)).join('')}</div>` : (TEXTO ? emptyBox('Nada encontrado', 'Tente outra palavra (ex.: travador, shunt, sinal, aspecto).') : ''));
+    return;
+  }
+  rc.hidden = true;
   const total = ESTUDOS.reduce((n, c) => n + c.docs.length, 0);
-  $('#estChips').innerHTML = [`<button class="chip" aria-pressed="${!S.cat}" data-act="chip-cat" data-c="">Todos<small>${total}</small></button>`,
-    ...ESTUDOS.map((c) => `<button class="chip" aria-pressed="${S.cat === c.id}" data-act="chip-cat" data-c="${c.id}"><svg class="ic"><use href="#${c.icon}"/></svg>${esc(c.nome)}<small>${c.docs.length}</small></button>`)].join('');
-  const list = ESTUDOS.filter((c) => !S.cat || c.id === S.cat);
-  $('#estCount').textContent = `${list.reduce((n, c) => n + c.docs.length, 0)} documentos`;
-  mount($('#estList'), list.length ? list.map((c) => `<section class="est-group" id="est-${c.id}">
-      <div class="est-head"><span class="est-ic"><svg class="ic"><use href="#${c.icon}"/></svg></span><div><h3>${esc(c.nome)}</h3><p>${esc(c.desc)}</p></div></div>
-      <div class="grid">${c.docs.map((d) => studyCard(d, c)).join('')}</div></section>`).join('') : emptyBox('Nenhum material ainda', 'Os documentos de estudo aparecerão aqui.'));
-  $('#estChips .chip[aria-pressed=true]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  if (!S.cat) {                             // visão geral: um card por assunto
+    crumb.hidden = true; $('#estTitle').textContent = 'Material de aprendizagem';
+    $('#estCount').textContent = `${ESTUDOS.length} assuntos • ${total} documentos`;
+    mount($('#estList'), ESTUDOS.length ? `<div class="grid cats">${ESTUDOS.map(catCard).join('')}</div>` : emptyBox('Nenhum material ainda', 'Os documentos aparecerão aqui.'));
+    return;
+  }
+  const c = ESTUDOS.find((x) => x.id === S.cat);   // dentro de um assunto: os documentos em cards
+  $('#estTitle').textContent = c.nome; $('#estCount').textContent = `${c.docs.length} ${c.docs.length > 1 ? 'documentos' : 'documento'}`;
+  crumb.hidden = false;
+  crumb.innerHTML = `<button class="chip" data-act="chip-cat" data-c=""><svg class="ic"><use href="#i-back"/></svg>Todos os assuntos</button><span class="muted">${esc(c.desc)}</span>`;
+  mount($('#estList'), `<div class="grid">${c.docs.map((d) => studyCard(d, c)).join('')}</div>`);
 }
+$('#estSearch').addEventListener('input', () => { renderEstudos(); });
+$('#estClear').onclick = () => { $('#estSearch').value = ''; renderEstudos(); $('#estSearch').focus(); };
 
 /* ---------------- abas ---------------- */
 const tabsEl = $('#tabs'), ind = $('.tab-ind');
@@ -256,7 +322,7 @@ function showTab(id, instant) {
   $$('.panel').forEach((p) => { const on = p.id === id; if (on && p.hidden) { p.hidden = false; } else if (!on) p.hidden = true; });
   if (id === 'equipamentos') renderEquip();
   if (id === 'pesquisa') renderSearch();
-  if (id === 'estudos') renderEstudos();
+  if (id === 'aprendizagem') renderEstudos();
   moveInd();
   if (!instant) window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -268,17 +334,17 @@ document.fonts?.ready.then(moveInd);
 function parseHash() {
   const raw = decodeURIComponent(location.hash.slice(1)), [path, qs = ''] = raw.split('?');
   const [tab, arg = ''] = path.split('/'), params = new URLSearchParams(qs);
-  return { tab: ['patios', 'equipamentos', 'pesquisa', 'estudos'].includes(tab) ? tab : 'patios', arg, ver: params.get('ver'), p: +params.get('p') || 1, km: +params.get('km') || 0 };
+  return { tab: ['patios', 'equipamentos', 'pesquisa', 'aprendizagem'].includes(tab) ? tab : tab === 'estudos' ? 'aprendizagem' : 'patios', arg, ver: params.get('ver'), p: +params.get('p') || 1, km: +params.get('km') || 0 };
 }
-const baseHash = (tab = S.tab) => '#' + tab + (tab === 'equipamentos' && S.yard ? '/' + S.yard : tab === 'estudos' && S.cat ? '/' + S.cat : '');
+const baseHash = (tab = S.tab) => '#' + tab + (tab === 'equipamentos' && S.yard ? '/' + S.yard : tab === 'aprendizagem' && S.cat ? '/' + S.cat : '');
 let viewerPushed = false;
 function route(first) {
   const h = parseHash();
   if (h.tab === 'equipamentos') { S.yard = yards.some((p) => p.id === h.arg) ? h.arg : ''; S.fav = false; }
-  if (h.tab === 'estudos') S.cat = ESTUDOS.some((c) => c.id === h.arg) ? h.arg : '';
+  if (h.tab === 'aprendizagem') S.cat = ESTUDOS.some((c) => c.id === h.arg) ? h.arg : '';
   if (h.tab !== S.tab || first) showTab(h.tab, true);
   else if (h.tab === 'equipamentos') renderEquip();
-  else if (h.tab === 'estudos') renderEstudos();
+  else if (h.tab === 'aprendizagem') renderEstudos();
   if (h.ver && byPath.has(h.ver) && avail(h.ver)) {
     const m = byPath.get(h.ver);
     const yd = yards.find((y) => y.planta === h.ver);
@@ -295,19 +361,19 @@ Viewer.onState(({ path, page, km }) => {
   if (!parseHash().ver) return;
   history.replaceState(null, '', `${baseHash()}?ver=${encodeURIComponent(path)}${page > 1 ? '&p=' + page : ''}${km ? '&km=' + km : ''}`);
 });
-function openDoc(path, code, km) {
+function openDoc(path, code, km, page) {
   if (!path || !avail(path)) return toast('Este PDF ainda não foi enviado.');
   viewerPushed = true;
   const it = code && itemByCode.get(code);
   const m = byPath.get(path) || {};
   if (it) { m.link = it.link; byPath.set(path, { ...m, title: `${it.nome} • ${it.badge}`, sub: `${it.pid} • ${it.pnome}`, link: it.link }); }
-  location.hash = `${baseHash()}?ver=${encodeURIComponent(path)}${km ? '&km=' + km : ''}`;
+  location.hash = `${baseHash()}?ver=${encodeURIComponent(path)}${page > 1 ? '&p=' + page : ''}${km ? '&km=' + km : ''}`;
 }
 
 /* ---------------- eventos ---------------- */
 $$('.tab[data-tab]').forEach((t) => (t.onclick = () => {
   const id = t.dataset.tab; if (id === S.tab) return window.scrollTo({ top: 0, behavior: 'smooth' });
-  location.hash = '#' + id + (id === 'equipamentos' && S.yard ? '/' + S.yard : id === 'estudos' && S.cat ? '/' + S.cat : '');
+  location.hash = '#' + id + (id === 'equipamentos' && S.yard ? '/' + S.yard : id === 'aprendizagem' && S.cat ? '/' + S.cat : '');
 }));
 $('#kmForm')?.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -325,8 +391,8 @@ document.addEventListener('click', (e) => {
   if (act === 'plant') { const p = yards.find((x) => x.id === b.dataset.p); p && openDoc(p.planta); }
   else if (act === 'km-open') { const p = yards.find((x) => x.id === b.dataset.p); p && openDoc(p.planta, null, +b.dataset.km || 0); }
   else if (act === 'pdf') { const i = itemByCode.get(b.dataset.code); i && openDoc(i.pdf, i.codigo); }
-  else if (act === 'study') openDoc(b.dataset.pdf);
-  else if (act === 'chip-cat') { S.cat = b.dataset.c; history.replaceState(null, '', baseHash('estudos')); renderEstudos(); }
+  else if (act === 'study') openDoc(b.dataset.pdf, null, 0, +b.dataset.p || 1);
+  else if (act === 'chip-cat') { S.cat = b.dataset.c; $('#estSearch').value = ''; history.replaceState(null, '', baseHash('aprendizagem')); renderEstudos(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (act === 'list') { location.hash = '#equipamentos/' + b.dataset.p; window.scrollTo({ top: 0 }); }
   else if (act === 'chip-yard') { S.yard = b.dataset.p; S.fav = false; history.replaceState(null, '', baseHash('equipamentos')); renderEquip(); }
   else if (act === 'chip-fav') { S.fav = !S.fav; if (S.fav) S.yard = ''; renderEquip(); }
@@ -363,3 +429,49 @@ renderStats();
 renderYards();
 route(true);
 if (S.tab !== 'patios') { /* stats só animam na primeira aba */ }
+
+
+/* ---------------- comentários e sugestões ---------------- */
+(() => {
+  const cfg = CONFIG.feedback || {}, box = $('#fb'), form = $('#fbForm'), note = $('#fbNote'), send = $('#fbSend');
+  const email = String(cfg.email || '').trim(), wpp = String(cfg.whatsapp || '').replace(/\D/g, '');
+  let type = 'Sugestão', lastFocus = null;
+  const where = () => { const h = parseHash(); const m = h.ver && byPath.get(h.ver); return m ? `${m.title} (pág. ${h.p})` : ({ patios: 'Pátios', equipamentos: 'Equipamentos', pesquisa: 'Pesquisa', aprendizagem: 'Aprendizagem' })[S.tab]; };
+  const text = () => `[${type}] ${$('#fbMsg').value.trim()}\n\n${$('#fbName').value.trim() ? 'De: ' + $('#fbName').value.trim() + '\n' : ''}Tela: ${where()}\nPortal de Pátios • ${location.origin}${location.pathname}`;
+  const open = () => {
+    lastFocus = document.activeElement; box.hidden = false; document.body.classList.add('lock'); note.textContent = '';
+    requestAnimationFrame(() => box.classList.add('show')); setTimeout(() => $('#fbMsg').focus(), 120);
+  };
+  const close = () => { box.classList.remove('show'); document.body.classList.remove('lock'); setTimeout(() => { box.hidden = true; }, 250); lastFocus?.focus?.(); };
+  $('#fbBtn').onclick = open;
+  box.addEventListener('click', (e) => { if (e.target.closest('[data-fb-close]')) close(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
+  $('#fbType').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return; type = b.dataset.t;
+    $$('#fbType .chip').forEach((c) => c.setAttribute('aria-pressed', c === b));
+  });
+  const wb = $('#fbWpp');
+  const syncWpp = () => { if (wpp) { wb.hidden = false; wb.href = `https://wa.me/${wpp}?text=${encodeURIComponent(text())}`; } };
+  form.addEventListener('input', syncWpp); syncWpp();
+  if (!email) $('span', send).textContent = wpp ? 'Enviar por e-mail' : 'Copiar mensagem';
+  if (!email && wpp) send.hidden = true;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!$('#fbMsg').value.trim()) return $('#fbMsg').focus();
+    send.disabled = true;
+    try {
+      if (email) {
+        let ok = false;
+        try {
+          const r = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(email), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ _subject: `Portal de Pátios • ${type}`, Tipo: type, Mensagem: $('#fbMsg').value.trim(), Nome: $('#fbName').value.trim() || '(não informado)', Tela: where(), _template: 'table' }) });
+          ok = r.ok;
+        } catch {}
+        if (!ok) { location.href = `mailto:${email}?subject=${encodeURIComponent('Portal de Pátios • ' + type)}&body=${encodeURIComponent(text())}`; note.textContent = 'Abrimos o seu aplicativo de e-mail para concluir o envio.'; return; }
+        note.textContent = 'Mensagem enviada. Obrigado!'; toast('Mensagem enviada. Obrigado!'); form.reset(); setTimeout(close, 1400);
+      } else {
+        try { await navigator.clipboard.writeText(text()); note.textContent = 'Mensagem copiada. Cole onde quiser enviá-la.'; toast('Mensagem copiada'); }
+        catch { note.textContent = 'Não foi possível copiar automaticamente.'; }
+      }
+    } finally { send.disabled = false; }
+  });
+})();

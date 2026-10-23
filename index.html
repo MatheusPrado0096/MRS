@@ -11,8 +11,8 @@
 <meta property="og:image" content="assets/img/icon-512.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest?v=202610231833">
-<link rel="stylesheet" href="assets/css/style.css?v=202610231833">
+<link rel="manifest" href="manifest.webmanifest?v=202610231908">
+<link rel="stylesheet" href="assets/css/style.css?v=202610231908">
 <script>
   // aplica o tema antes de pintar a página (evita "flash" branco)
   try{var t=localStorage.getItem('mrs-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}
@@ -50,6 +50,7 @@
     <symbol id="i-signal" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="14" rx="3"/><circle cx="12" cy="6" r="1.2"/><circle cx="12" cy="9" r="1.2"/><circle cx="12" cy="12" r="1.2"/><path d="M12 16v6M8 22h8"/></symbol>
     <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
     <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".6"/><circle cx="15" cy="14" r=".6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/><path d="M8 9h8M8 13h5"/></symbol>
     <symbol id="i-open" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
   </defs>
 </svg>
@@ -63,6 +64,7 @@
   </a>
   <div class="topbar-actions">
     <button class="icon-btn" id="goSearch" aria-label="Pesquisar" title="Pesquisar ( / )"><svg class="ic"><use href="#i-search"/></svg></button>
+    <button class="icon-btn" id="fbBtn" aria-label="Comentários e sugestões" title="Comentários e sugestões" aria-haspopup="dialog"><svg class="ic"><use href="#i-chat"/></svg></button>
     <button class="icon-btn" id="themeBtn" aria-label="Alternar tema claro/escuro" title="Alternar tema"><svg class="ic"><use id="themeIcon" href="#i-moon"/></svg></button>
   </div>
 </header>
@@ -72,7 +74,7 @@
   <button class="tab" role="tab" data-tab="patios"><svg class="ic"><use href="#i-map"/></svg><span>Pátios</span></button>
   <button class="tab" role="tab" data-tab="equipamentos"><svg class="ic"><use href="#i-layers"/></svg><span>Equipamentos</span></button>
   <button class="tab" role="tab" data-tab="pesquisa"><svg class="ic"><use href="#i-search"/></svg><span>Pesquisa</span></button>
-  <button class="tab" role="tab" data-tab="estudos"><svg class="ic"><use href="#i-book"/></svg><span>Estudos</span></button>
+  <button class="tab" role="tab" data-tab="aprendizagem"><svg class="ic"><use href="#i-book"/></svg><span>Aprendizagem</span></button>
   <a class="tab ext" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer" title="Abrir o Portal de Acesso (Linktree)"><svg class="ic"><use href="#i-link"/></svg><span>Portal</span></a>
 </nav>
 
@@ -113,7 +115,7 @@
     <div class="section-head"><div><span class="eyebrow">Pesquisa</span><h2>Encontre qualquer item</h2></div></div>
     <div class="searchbox">
       <svg class="ic"><use href="#i-search"/></svg>
-      <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Código, ABR, PN, CX ou pátio…" aria-label="Pesquisar">
+      <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Código, pátio, KM ou assunto de estudo…" aria-label="Pesquisar">
       <button class="icon-btn small" id="clearBtn" aria-label="Limpar pesquisa" hidden><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="chips" id="typeChips" role="group" aria-label="Filtrar por tipo"></div>
@@ -121,15 +123,21 @@
     <div id="results" class="grid"></div>
   </section>
 
-  <!-- ESTUDOS -->
-  <section id="estudos" class="panel" role="tabpanel" hidden>
-    <div class="section-head"><div><span class="eyebrow">Estudos</span><h2>Material de aprendizagem</h2></div><span class="muted" id="estCount"></span></div>
+  <!-- APRENDIZAGEM -->
+  <section id="aprendizagem" class="panel" role="tabpanel" hidden>
+    <div class="section-head"><div><span class="eyebrow">Aprendizagem</span><h2 id="estTitle">Material de aprendizagem</h2></div><span class="muted" id="estCount"></span></div>
     <a class="portal-card" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer">
       <span class="pc-ic"><svg class="ic"><use href="#i-link"/></svg></span>
       <span class="pc-tx"><b>Portal de Acesso MRS Pinheirinho</b><small>Todos os links e sistemas reunidos em um só lugar • linktr.ee/MRSPinheirinho</small></span>
       <svg class="ic pc-go"><use href="#i-open"/></svg>
     </a>
-    <div class="chips scroll" id="estChips" role="group" aria-label="Filtrar por assunto"></div>
+    <div class="searchbox">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <input id="estSearch" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar nos materiais (ex.: travador, shunt, aspecto)…" aria-label="Pesquisar na aprendizagem">
+      <button class="icon-btn small" id="estClear" aria-label="Limpar pesquisa" hidden><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="estCrumb" class="crumb" hidden></div>
+    <p id="estResultCount" class="muted" aria-live="polite" hidden></p>
     <div id="estList"></div>
   </section>
 </main>
@@ -139,6 +147,30 @@
   <span>MRS Logística • Portal de Pátios</span>
   <a class="foot-link" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer">Portal de Acesso</a>
 </footer>
+
+<!-- COMENTÁRIOS E SUGESTÕES -->
+<div class="fb" id="fb" role="dialog" aria-modal="true" aria-labelledby="fbTitle" hidden>
+  <div class="fb-back" data-fb-close></div>
+  <form class="fb-card" id="fbForm" autocomplete="off">
+    <div class="fb-head"><span class="fb-ic"><svg class="ic"><use href="#i-chat"/></svg></span><div><h2 id="fbTitle">Comentários e sugestões</h2><p>Encontrou um erro, tem uma ideia ou quer pedir um documento? Conte para a gente.</p></div>
+      <button class="icon-btn small" type="button" data-fb-close aria-label="Fechar"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="chips" role="group" aria-label="Tipo de mensagem" id="fbType">
+      <button class="chip" type="button" aria-pressed="true" data-t="Sugestão">💡 Sugestão</button>
+      <button class="chip" type="button" aria-pressed="false" data-t="Comentário">💬 Comentário</button>
+      <button class="chip" type="button" aria-pressed="false" data-t="Problema">⚠️ Problema</button>
+      <button class="chip" type="button" aria-pressed="false" data-t="Elogio">👏 Elogio</button>
+    </div>
+    <label class="fb-l" for="fbMsg">Sua mensagem</label>
+    <textarea id="fbMsg" rows="5" maxlength="2000" required placeholder="Escreva aqui…"></textarea>
+    <label class="fb-l" for="fbName">Nome ou matrícula <small>(opcional)</small></label>
+    <input id="fbName" maxlength="80" placeholder="Se quiser ser respondido">
+    <div class="fb-actions">
+      <button class="btn primary" type="submit" id="fbSend"><svg class="ic"><use href="#i-share"/></svg><span>Enviar</span></button>
+      <a class="btn" id="fbWpp" target="_blank" rel="noopener noreferrer" hidden>WhatsApp</a>
+    </div>
+    <p class="fb-note" id="fbNote" aria-live="polite"></p>
+  </form>
+</div>
 
 <!-- VISUALIZADOR -->
 <div id="viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Visualizador de documento" hidden>
@@ -201,8 +233,8 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="data.js?v=202610231833"></script>
-<script type="module" src="assets/js/app.js?v=202610231833"></script>
+<script src="data.js?v=202610231908"></script>
+<script type="module" src="assets/js/app.js?v=202610231908"></script>
 <noscript><p style="padding:24px;font-family:sans-serif">Ative o JavaScript para usar o Portal de Pátios.</p></noscript>
 </body>
 </html>
