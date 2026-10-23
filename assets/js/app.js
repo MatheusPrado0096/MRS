@@ -1,6 +1,6 @@
 /* Portal de Pátios • MRS — interface */
-import * as Viewer from './viewer.js?v=202610231908';
-import * as Km from './km.js?v=202610231908';
+import * as Viewer from './viewer.js?v=202610231909';
+import * as Km from './km.js?v=202610231909';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -13,13 +13,13 @@ const store = {
 
 /* ---------------- dados ---------------- */
 let META = {};
-try { const r = await fetch('data/meta.json?v=202610231908', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
+try { const r = await fetch('data/meta.json?v=202610231909', { cache: 'no-cache' }); if (r.ok) META = await r.json(); } catch {}
 Viewer.setMeta(META);
-try { const r = await fetch('data/kms.json?v=202610231908', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
+try { const r = await fetch('data/kms.json?v=202610231909', { cache: 'no-cache' }); if (r.ok) Km.setKmData(await r.json()); } catch {}
 let ESTUDOS = [];
-try { const r = await fetch('data/estudos.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) ESTUDOS = await r.json(); } catch {}
+try { const r = await fetch('data/estudos.json?v=202610231909', { cache: 'no-cache' }); if (r.ok) ESTUDOS = await r.json(); } catch {}
 let CONFIG = {};
-try { const r = await fetch('data/config.json?v=202610221254', { cache: 'no-cache' }); if (r.ok) CONFIG = await r.json(); } catch {}
+try { const r = await fetch('data/config.json?v=202610231909', { cache: 'no-cache' }); if (r.ok) CONFIG = await r.json(); } catch {}
 const hasMeta = Object.keys(META).length > 0;
 const avail = (p) => !!p && (hasMeta ? !!META[p] : true);
 
@@ -234,7 +234,7 @@ let TEXTO = null, textoLoading = false;
 function loadTexto(then) {
   if (TEXTO || textoLoading) return;
   textoLoading = true;
-  fetch('data/aprendizagem-texto.json?v=202610221254').then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((j) => {
+  fetch('data/aprendizagem-texto.json?v=202610231909').then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((j) => {
     TEXTO = {};
     for (const [k, v] of Object.entries(j)) TEXTO[k] = v.pages.map((t) => ({ raw: t, n: norm(t) }));
     then?.();

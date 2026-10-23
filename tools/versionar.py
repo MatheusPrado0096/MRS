@@ -11,6 +11,6 @@ def stamp(path, pats):
     for p in pats: s = re.sub(p, lambda m: m.group(1) + '?v=' + v + m.group(2), s)
     f.write_text(s, encoding='utf-8')
 stamp('index.html', [r'(assets/css/style\.css)(?:\?v=\w+)?(")', r'(href="manifest\.webmanifest)(?:\?v=\w+)?(")', r'(src="data\.js)(?:\?v=\w+)?(")', r'(assets/js/app\.js)(?:\?v=\w+)?(")'])
-stamp('assets/js/app.js', [r"(from '\./(?:viewer|km)\.js)(?:\?v=\w+)?(')", r"(fetch\('data/(?:meta|kms)\.json)(?:\?v=\w+)?(')"])
+stamp('assets/js/app.js', [r"(from '\./(?:viewer|km)\.js)(?:\?v=\w+)?(')", r"(fetch\('data/(?:meta|kms|estudos|config|aprendizagem-texto)\.json)(?:\?v=\w+)?(')"])
 stamp('assets/js/viewer.js', [r"(from '\./km\.js)(?:\?v=\w+)?(')", r"(import\('\./pdfexport\.js)(?:\?v=\w+)?(')"])
 print('versão', v)
