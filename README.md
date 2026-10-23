@@ -67,3 +67,10 @@ tools/                scripts auxiliares
 ## Observações sobre os dados recebidos
 - Os PDFs de FCA, FEA, FEM, FSJ01, FGA, FCE e as plantas de IEF/FGA/FCE não estavam no zip enviado; aparecem como "em breve" até serem adicionados.
 - `IEF10` apontava para `IEF01.pdf` (mesmo arquivo do `IEF01`); apontei para `IEF02.pdf`, que existia sem uso. Se não for isso, ajuste em `data.js`.
+
+
+## Aba Estudos e Portal de acesso
+- A aba **Estudos** lista o material de aprendizagem por assunto (AMVs/Travador, Sinalização, Registrador Wabtec, Projetos/Aspect Charts, Ferrovias). Os PDFs ficam em `docs/estudos/<assunto>/` e são descritos em `data/estudos.json`.
+- Para adicionar um material: copie o PDF para a pasta do assunto, acrescente uma entrada em `data/estudos.json` (ou crie um assunto novo) e rode `python3 tools/gerar-miniaturas.py` e `python3 tools/versionar.py`.
+- Os PDFs de estudo abrem **coloridos** (as plantas continuam em preto e branco).
+- O botão **Portal** no menu (e o cartão no topo de Estudos) abre https://linktr.ee/MRSPinheirinho em outra aba.

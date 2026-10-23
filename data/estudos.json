@@ -1,0 +1,102 @@
+[
+ {
+  "id": "amv",
+  "nome": "AMVs e Travador Elétrico",
+  "desc": "Máquinas de chave, travador elétrico: operação, manutenção e inspeção.",
+  "icon": "i-switch",
+  "docs": [
+   {
+    "pdf": "docs/estudos/amv/travador-eletrico.pdf",
+    "titulo": "Travador Elétrico",
+    "desc": "Operação, Manutenção e Inspeção do Travador Elétrico: componentes, circuito e rotinas de inspeção."
+   },
+   {
+    "pdf": "docs/estudos/amv/apostila-travador-eletrico.pdf",
+    "titulo": "Apostila do Travador Elétrico",
+    "desc": "Apostila de treinamento sobre o travador elétrico (convertida do arquivo .doc)."
+   }
+  ]
+ },
+ {
+  "id": "sinalizacao",
+  "nome": "Sinalização Ferroviária",
+  "desc": "Fundamentos de sinalização: circuitos de via, sinais, aspectos e equipamentos.",
+  "icon": "i-signal",
+  "docs": [
+   {
+    "pdf": "docs/estudos/sinalizacao/apostila-sinalizacao.pdf",
+    "titulo": "Apostila de Treinamento em Sinalização",
+    "desc": "Elementos de Sinalização Ferroviária • Curso Rev. 1.1 • Engenharia de Eletroeletrônica."
+   }
+  ]
+ },
+ {
+  "id": "wabtec",
+  "nome": "Registrador de Eventos Wabtec",
+  "desc": "Treinamento em leitura do registrador de eventos da sinalização Wabtec.",
+  "icon": "i-chip",
+  "docs": [
+   {
+    "pdf": "docs/estudos/wabtec/modulo-2-cabeceira-patio-parte-1.pdf",
+    "titulo": "Módulo 2 • Cabeceira de Pátio (parte I)",
+    "desc": "Variáveis de cabeceira de pátio."
+   },
+   {
+    "pdf": "docs/estudos/wabtec/modulo-2-cabeceira-patio-parte-2.pdf",
+    "titulo": "Módulo 2 • Cabeceira de Pátio (parte II)",
+    "desc": "Continuação: equações típicas de pedido de sinal e demais variáveis."
+   },
+   {
+    "pdf": "docs/estudos/wabtec/modulo-3-automatico.pdf",
+    "titulo": "Módulo 3 • Variáveis de Automático",
+    "desc": "Circuito de via, temporizador de perda de shunt, bloqueio."
+   },
+   {
+    "pdf": "docs/estudos/wabtec/modulo-4-log-de-sistema.pdf",
+    "titulo": "Módulo 4 • Log de Sistema",
+    "desc": "Como ler o log de sistema do registrador de eventos."
+   }
+  ]
+ },
+ {
+  "id": "projetos",
+  "nome": "Projetos e Aspect Charts",
+  "desc": "Projetos de sinalização (Electrologixs) e tabelas de aspectos dos sinais.",
+  "icon": "i-layers",
+  "docs": [
+   {
+    "pdf": "docs/estudos/projetos/EE-SD-FA-0FIN-116.pdf",
+    "titulo": "Projeto EE-SD-FA-0FIN-116",
+    "desc": "Plano de via e sinal, programa Electrologixs, circuitos de via, máquina de chave e painel local (23 folhas)."
+   },
+   {
+    "pdf": "docs/estudos/projetos/EE-SD-FA-0FIN-119.pdf",
+    "titulo": "Projeto EE-SD-FA-0FIN-119",
+    "desc": "Sinais 119-0 e 119-1: plano de via, Electrologixs, circuitos e casa 4x4 (15 folhas)."
+   },
+   {
+    "pdf": "docs/estudos/projetos/aspect-chart-fase-0.pdf",
+    "titulo": "Aspect Chart • Fase 0",
+    "desc": "Tabela de aspectos dos sinais 0FWA (fase 0, abril/2011)."
+   },
+   {
+    "pdf": "docs/estudos/projetos/aspect-chart-0FWA-116-122.pdf",
+    "titulo": "Aspect Chart • 0FWA-116 a 122",
+    "desc": "Tabela de aspectos dos sinais 0FWA-116 a 0FWA-122."
+   }
+  ]
+ },
+ {
+  "id": "ferrovias",
+  "nome": "Ferrovias",
+  "desc": "Conceitos gerais de via permanente e engenharia ferroviária.",
+  "icon": "i-train",
+  "docs": [
+   {
+    "pdf": "docs/estudos/ferrovias/manual-didatico-ferrovias.pdf",
+    "titulo": "Manual Didático de Ferrovias",
+    "desc": "Coletânea de informações sobre ferrovias (2012) • primeira parte."
+   }
+  ]
+ }
+]

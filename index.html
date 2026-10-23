@@ -11,8 +11,8 @@
 <meta property="og:image" content="assets/img/icon-512.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest?v=202610221254">
-<link rel="stylesheet" href="assets/css/style.css?v=202610221254">
+<link rel="manifest" href="manifest.webmanifest?v=202610231833">
+<link rel="stylesheet" href="assets/css/style.css?v=202610231833">
 <script>
   // aplica o tema antes de pintar a página (evita "flash" branco)
   try{var t=localStorage.getItem('mrs-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}
@@ -44,6 +44,12 @@
     <symbol id="i-fitp" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></symbol>
     <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6zM9 3v15M15 6v15"/></symbol>
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7l10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.7 1.7M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.7-1.7"/></symbol>
+    <symbol id="i-switch" viewBox="0 0 24 24"><path d="M3 20 12 4M12 4v16M12 4l9 16M7 20h10"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="14" rx="3"/><circle cx="12" cy="6" r="1.2"/><circle cx="12" cy="9" r="1.2"/><circle cx="12" cy="12" r="1.2"/><path d="M12 16v6M8 22h8"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4"/><circle cx="9" cy="14" r=".6"/><circle cx="15" cy="14" r=".6"/></symbol>
     <symbol id="i-open" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
   </defs>
 </svg>
@@ -66,6 +72,8 @@
   <button class="tab" role="tab" data-tab="patios"><svg class="ic"><use href="#i-map"/></svg><span>Pátios</span></button>
   <button class="tab" role="tab" data-tab="equipamentos"><svg class="ic"><use href="#i-layers"/></svg><span>Equipamentos</span></button>
   <button class="tab" role="tab" data-tab="pesquisa"><svg class="ic"><use href="#i-search"/></svg><span>Pesquisa</span></button>
+  <button class="tab" role="tab" data-tab="estudos"><svg class="ic"><use href="#i-book"/></svg><span>Estudos</span></button>
+  <a class="tab ext" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer" title="Abrir o Portal de Acesso (Linktree)"><svg class="ic"><use href="#i-link"/></svg><span>Portal</span></a>
 </nav>
 
 <main id="main">
@@ -112,11 +120,24 @@
     <p id="resultCount" class="muted" aria-live="polite"></p>
     <div id="results" class="grid"></div>
   </section>
+
+  <!-- ESTUDOS -->
+  <section id="estudos" class="panel" role="tabpanel" hidden>
+    <div class="section-head"><div><span class="eyebrow">Estudos</span><h2>Material de aprendizagem</h2></div><span class="muted" id="estCount"></span></div>
+    <a class="portal-card" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer">
+      <span class="pc-ic"><svg class="ic"><use href="#i-link"/></svg></span>
+      <span class="pc-tx"><b>Portal de Acesso MRS Pinheirinho</b><small>Todos os links e sistemas reunidos em um só lugar • linktr.ee/MRSPinheirinho</small></span>
+      <svg class="ic pc-go"><use href="#i-open"/></svg>
+    </a>
+    <div class="chips scroll" id="estChips" role="group" aria-label="Filtrar por assunto"></div>
+    <div id="estList"></div>
+  </section>
 </main>
 
 <footer class="foot">
   <img src="assets/img/mrs-logo.png" alt="" width="28" height="28">
   <span>MRS Logística • Portal de Pátios</span>
+  <a class="foot-link" href="https://linktr.ee/MRSPinheirinho" target="_blank" rel="noopener noreferrer">Portal de Acesso</a>
 </footer>
 
 <!-- VISUALIZADOR -->
@@ -165,8 +186,8 @@
 
   <div class="v-dlmenu" id="vDlMenu" role="menu" hidden>
     <b>Baixar PDF</b>
-    <button role="menuitem" data-mode="light"><i class="sw sw-l"></i><span>Claro<small>linhas pretas no fundo branco</small></span></button>
-    <button role="menuitem" data-mode="dark"><i class="sw sw-d"></i><span>Escuro<small>linhas brancas no fundo preto</small></span></button>
+    <button role="menuitem" data-mode="light" class="plant-only"><i class="sw sw-l"></i><span>Claro<small>linhas pretas no fundo branco</small></span></button>
+    <button role="menuitem" data-mode="dark" class="plant-only"><i class="sw sw-d"></i><span>Escuro<small>linhas brancas no fundo preto</small></span></button>
     <button role="menuitem" data-mode="original"><i class="sw sw-o"></i><span>Original<small>com as cores do arquivo</small></span></button>
   </div>
 
@@ -180,8 +201,8 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="data.js?v=202610221254"></script>
-<script type="module" src="assets/js/app.js?v=202610221254"></script>
+<script src="data.js?v=202610231833"></script>
+<script type="module" src="assets/js/app.js?v=202610231833"></script>
 <noscript><p style="padding:24px;font-family:sans-serif">Ative o JavaScript para usar o Portal de Pátios.</p></noscript>
 </body>
 </html>

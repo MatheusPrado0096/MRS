@@ -2,7 +2,7 @@
  * Renderiza apenas a região visível (mais margem), então fica nítido em qualquer ampliação
  * sem estourar a memória do celular. Durante o gesto usa transformação CSS (60 fps). */
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
-import { fmtKm } from './km.js?v=202610221254';
+import { fmtKm } from './km.js?v=202610231833';
 
 const BASE = new URL('../vendor/pdfjs/', import.meta.url).href;
 pdfjs.GlobalWorkerOptions.workerSrc = BASE + 'pdf.worker.min.mjs';
@@ -31,7 +31,7 @@ let front = el.a, back = el.b;
 let fitMode = 'contain', autoFit = true, freeze = false;
 let renderGen = 0, renderTask = null, renderTimer = 0, tween = 0, momentum = 0, resizeObs = null;
 let night = false, opened = false, onCloseCb = null, hintTimer = 0, badgeTimer = 0, thumbToken = 0;
-let curPage = null;
+let curPage = null, colorDoc = false;   // colorDoc: material de estudo (mantém as cores originais)
 let pins = [];                      // alfinetes de KM: { page, x, y (fração da página), km, approx }
 
 /* ---------------- cores: desenho monocromático (preto no claro, branco no escuro) ---------------- */
@@ -124,13 +124,14 @@ async function renderNow() {
     console.warn('Falha ao renderizar', e); return;
   }
   if (gen !== renderGen) return;
-  mono(ctx, c.width, c.height, night);
+  if (!colorDoc) mono(ctx, c.width, c.height, night);
   // fundo da página (branco no claro, preto no escuro) e sombra, desenhados atrás do conteúdo
   ctx.save();
   ctx.globalCompositeOperation = 'destination-over';   // tudo abaixo é pintado ATRÁS do conteúdo do PDF
   const rx = (target.x + m) * dpr, ry = (target.y + m) * dpr, rw = pw * target.z * dpr, rh = ph * target.z * dpr;
-  ctx.fillStyle = night ? '#000' : '#fff'; ctx.fillRect(rx, ry, rw, rh);
-  if (!night) { // sombra: o retângulo fica fora do canvas e só a sombra aparece, atrás do papel
+  const dark = night && !colorDoc;   // colorDoc no escuro: o CSS inverte o canvas (fundo branco aqui)
+  ctx.fillStyle = dark ? '#000' : '#fff'; ctx.fillRect(rx, ry, rw, rh);
+  if (!dark) { // sombra: o retângulo fica fora do canvas e só a sombra aparece, atrás do papel
     ctx.shadowColor = 'rgba(0,20,40,.38)'; ctx.shadowBlur = 26 * dpr; ctx.shadowOffsetY = 8 * dpr; ctx.shadowOffsetX = -20000;
     ctx.fillStyle = '#000'; ctx.fillRect(rx + 20000, ry, rw, rh);
   }
@@ -377,6 +378,7 @@ export async function open({ path, title, sub = '', link = '', page = 1, pins: i
   if (opened && path === curPath) { if (initPins.length) setPins(initPins); else if (page !== pageNum) gotoPage(page); return; }
   opened = true; curPath = path; pins = (initPins || []).map((p) => ({ ...p })); el.pinsLayer.replaceChildren(); el.kmChip.hidden = true;
   closeDlMenu();
+  colorDoc = !!meta[path]?.color; el.root.classList.toggle('v-color', colorDoc);
   document.body.classList.add('lock');
   el.root.classList.remove('closing'); el.root.hidden = false;
   el.title.textContent = title; el.sub.textContent = sub;
@@ -452,7 +454,7 @@ function buildPagesGrid() {
         const sc = (220 * Math.min(devicePixelRatio || 1, 2)) / v0.width, vp = pg.getViewport({ scale: sc });
         cv.width = vp.width; cv.height = vp.height;
         const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-        await pg.render({ canvasContext: ctx, canvas: cv, viewport: vp }).promise; mono(ctx, cv.width, cv.height, false); cv.dataset.done = 1;
+        await pg.render({ canvasContext: ctx, canvas: cv, viewport: vp }).promise; if (!colorDoc) mono(ctx, cv.width, cv.height, false); cv.dataset.done = 1;
       } catch { return; }
     }
   };
@@ -520,7 +522,7 @@ el.dlMenu.addEventListener('click', async (e) => {
   const label = mode === 'dark' ? 'escuro' : 'claro';
   toast(`Preparando PDF ${label}…`); el.dl.classList.add('busy');
   try {
-    const { downloadPdf } = await import('./pdfexport.js?v=202610221254');
+    const { downloadPdf } = await import('./pdfexport.js?v=202610231833');
     await downloadPdf(encodeURI(curPath), mode, `${base}-${label}.pdf`, (f) => { if (f > 0 && f < 1) setProgress(f); });
     el.progress.classList.add('done'); toast(`PDF ${label} baixado`);
   } catch (err) { console.warn(err); toast('Não foi possível gerar o PDF. Baixando o original.'); const a = document.createElement('a'); a.href = encodeURI(curPath); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }

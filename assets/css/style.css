@@ -363,3 +363,28 @@ mark{background:color-mix(in srgb,var(--yellow) 70%,transparent);color:inherit;b
 .pin.mark .pulse{border-color:#ff9f1d}
 .pin.mark .pin-lbl{background:#e68a00}
 .pin-wrap:has(.mark) .pin-line{background:repeating-linear-gradient(180deg,#e68a00 0 14px,transparent 14px 24px)}
+
+/* ---- Estudos + Portal de acesso ---- */
+.tab.ext{text-decoration:none}
+.tab.ext .ic{color:var(--yellow)}
+.portal-card{display:flex;align-items:center;gap:14px;margin:4px 0 18px;padding:16px 18px;border-radius:var(--r-lg,18px);text-decoration:none;color:#fff;background:linear-gradient(120deg,var(--navy,#00335e),#0a5aa0);box-shadow:0 10px 28px rgba(0,40,80,.25);transition:transform .25s var(--ease),box-shadow .25s}
+.portal-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,40,80,.34)}
+.portal-card .pc-ic{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--yellow);color:#14202e}
+.portal-card .pc-ic .ic{width:24px;height:24px}
+.portal-card .pc-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.portal-card .pc-tx b{font-size:1.02rem}
+.portal-card .pc-tx small{opacity:.82;line-height:1.35}
+.portal-card .pc-go{margin-left:auto;flex:none;opacity:.8}
+.chip .ic{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.est-group{margin-top:26px}
+.est-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.est-head h3{margin:0;font-size:1.15rem}
+.est-head p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.est-ic{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--primary)}
+.card.study .actions{align-items:center}
+.card.study .sz{margin-left:auto;font-size:.8rem}
+:root[data-theme=dark] .card.study .thumb img{filter:none}
+.foot-link{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.viewer.v-color .plant-only{display:none}
+.viewer.v-color.night .v-canvas{filter:invert(1) hue-rotate(180deg)}
+@media(max-width:700px){.portal-card{padding:14px}.portal-card .pc-tx small{font-size:.78rem}}

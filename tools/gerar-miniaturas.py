@@ -12,6 +12,9 @@ data = json.loads(re.search(r'window\.PATIOS\s*=\s*(\[.*\])\s*;?\s*$', txt, re.S
 paths = []
 for p in data:
     paths.append(p['planta']); paths += [i['pdf'] for i in p['itens']]
+est = json.loads((root/'data'/'estudos.json').read_text(encoding='utf-8')) if (root/'data'/'estudos.json').exists() else []
+estudos = [d['pdf'] for c in est for d in c['docs']]   # material de estudo: colorido (sem a conversão monocromática das plantas)
+paths += estudos
 (root/'thumbs').mkdir(exist_ok=True)
 meta = {}
 for rel in dict.fromkeys(paths):
@@ -26,9 +29,10 @@ for rel in dict.fromkeys(paths):
         subprocess.run(['pdftoppm','-f','1','-l','1','-r','60','-png',str(f),td+'/p'],check=True)
         png = next(Path(td).glob('p*.png'))
         im = Image.open(png).convert('RGB'); im.thumbnail((640,640))
+        color = rel in estudos
         r, g, b = im.split()   # monocromático: menor canal = "tinta" (preto no tema claro; o CSS inverte no escuro)
-        im = ImageChops.darker(ImageChops.darker(r, g), b).convert('RGB')
+        if not color: im = ImageChops.darker(ImageChops.darker(r, g), b).convert('RGB')
         im.save(out,'WEBP',quality=72,method=6)
-    meta[rel] = {'pages': pages, 'thumb': f'thumbs/{out.name}', 'w': float(size.group(1)), 'h': float(size.group(2)), 'kb': round(f.stat().st_size/1024)}
+    meta[rel] = {'pages': pages, 'thumb': f'thumbs/{out.name}', 'w': float(size.group(1)), 'h': float(size.group(2)), 'kb': round(f.stat().st_size/1024), **({'color': True} if color else {})}
 (root/'data'/'meta.json').write_text(json.dumps(meta, ensure_ascii=False, separators=(',',':')), encoding='utf-8')
 print(len(meta), 'PDFs processados')
